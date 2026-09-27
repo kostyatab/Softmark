@@ -39,11 +39,15 @@ public sealed class DeferredUpdateCheckTests
         Assert.Equal(1, service.CheckCount);
     }
 
+    /// <summary>
+    /// Проверка висит, пока тест не завершит её сам: с одной паузой в 20 мс медленная
+    /// машина успевала закончить проверку раньше, чем окно закрывалось.
+    /// </summary>
     [Fact]
     public async Task ClosingOneWindowDoesNotCancelAnotherObserver()
     {
-        var service = new StubUpdateService();
-        using var check = new DeferredUpdateCheck(service, TimeSpan.FromMilliseconds(20));
+        var service = new StubUpdateService { PendingCheck = new TaskCompletionSource<UpdateCheckResult>() };
+        using var check = new DeferredUpdateCheck(service, TimeSpan.FromMilliseconds(1));
         using var observer = new CancellationTokenSource();
         var closed = check.WaitAsync(observer.Token);
         var remaining = check.WaitAsync(CancellationToken.None);
@@ -51,6 +55,8 @@ public sealed class DeferredUpdateCheckTests
         await observer.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => closed);
+        Assert.False(remaining.IsCompleted);
+        service.PendingCheck.SetResult(service.NextCheckResult);
         Assert.IsType<UpdateCheckResult.SourceNotConfigured>(await remaining);
         Assert.Equal(1, service.CheckCount);
     }

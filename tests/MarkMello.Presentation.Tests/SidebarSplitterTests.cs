@@ -50,23 +50,24 @@ public sealed class SidebarSplitterTests
             Assert.DoesNotContain("mm-editor-splitter", splitter.Classes);
 
             // Граница сайдбара — его последний пиксель; линия разделителя ровно на нём.
+            // Координаты — от раскладки: на Windows её сдвигает рамка окна в 1 px.
             var sidebar = SidebarBorder(window);
-            var sidebarRight = sidebar.TranslatePoint(new Point(sidebar.Bounds.Width, 0), window)!.Value.X;
+            var sidebarRight = sidebar.TranslatePoint(new Point(sidebar.Bounds.Width, 0), layout)!.Value.X;
             Assert.Equal(WorkspaceSidebarWidth.Default, sidebarRight);
             Assert.Same(Resource(window, "MmBorderSoftBrush"), sidebar.BorderBrush);
             Assert.Equal(new Thickness(0, 0, 1, 0), sidebar.BorderThickness);
 
             var line = Line(splitter);
             Assert.Equal(1, line.Bounds.Width);
-            Assert.Equal(sidebarRight - 1, line.TranslatePoint(default, window)!.Value.X);
+            Assert.Equal(sidebarRight - 1, line.TranslatePoint(default, layout)!.Value.X);
             Assert.Equal(Colors.Transparent, Assert.IsAssignableFrom<ISolidColorBrush>(line.Background).Color);
 
             // Документ начинается сразу за сайдбаром, без полосы под разделитель.
             var document = Assert.IsAssignableFrom<Control>(layout.Children.Single(child => Grid.GetColumn(child) == 2));
-            Assert.Equal(sidebarRight, document.TranslatePoint(default, window)!.Value.X);
+            Assert.Equal(sidebarRight, document.TranslatePoint(default, layout)!.Value.X);
 
             // Зона захвата — 9 px с центром на пикселе границы.
-            var hitArea = splitter.TranslatePoint(default, window)!.Value.X;
+            var hitArea = splitter.TranslatePoint(default, layout)!.Value.X;
             Assert.Equal(9, splitter.Bounds.Width);
             Assert.Equal(sidebarRight - 5, hitArea);
             Assert.Equal(nameof(StandardCursorType.SizeWestEast), splitter.Cursor?.ToString());
@@ -89,11 +90,11 @@ public sealed class SidebarSplitterTests
 
             foreach (var x in new[] { border - 4, border, border + 4 })
             {
-                window.MouseMove(new Point(WorkspaceSidebarWidth.Default + 200, 300));
+                window.MouseMove(InWindow(window, new Point(WorkspaceSidebarWidth.Default + 200, 300)));
                 Render(window);
                 Assert.Equal(Colors.Transparent, LineColor(splitter));
 
-                window.MouseMove(new Point(x, 300));
+                window.MouseMove(InWindow(window, new Point(x, 300)));
                 Render(window);
                 Assert.Equal(AccentColor(window), LineColor(splitter));
             }
@@ -115,7 +116,7 @@ public sealed class SidebarSplitterTests
             var layout = window.GetControl<Grid>("SidebarLayout");
             var splitter = Splitter(window);
             var y = 300d;
-            var start = new Point(WorkspaceSidebarWidth.Default - 0.5, y);
+            var start = InWindow(window, new Point(WorkspaceSidebarWidth.Default - 0.5, y));
 
             window.MouseDown(start, MouseButton.Left);
             window.MouseMove(start + new Point(40, 0), RawInputModifiers.LeftMouseButton);
@@ -157,10 +158,17 @@ public sealed class SidebarSplitterTests
             Assert.False(Splitter(window).IsVisible);
             var layout = window.GetControl<Grid>("SidebarLayout");
             var document = Assert.IsAssignableFrom<Control>(layout.Children.Single(child => Grid.GetColumn(child) == 2));
-            Assert.Equal(0, document.TranslatePoint(default, window)!.Value.X);
+            Assert.Equal(0, document.TranslatePoint(default, layout)!.Value.X);
             window.Hide();
         });
     }
+
+    /// <summary>
+    /// Точка раскладки в координатах окна: на Windows раскладку сдвигает рамка окна
+    /// в 1 px, и мышь, наведённая по координатам раскладки, промахивалась бы на пиксель.
+    /// </summary>
+    private static Point InWindow(Window window, Point point)
+        => window.GetControl<Grid>("SidebarLayout").TranslatePoint(point, window)!.Value;
 
     private static GridSplitter Splitter(Window window)
         => window.GetControl<GridSplitter>("SidebarSplitter");
