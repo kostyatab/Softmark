@@ -244,6 +244,41 @@ public sealed class AppMenuAndSettingsWindowTests
     }
 
     /// <summary>
+    /// Между строками настроек — по линии, над футером — одна линия, его собственная: у
+    /// последней строки нижней границы нет. От неё до линии 16 px, от линии до текста 14.
+    /// </summary>
+    [Fact]
+    public Task SettingsWindowHasOneDividerAboveTheFooter()
+    {
+        return _fixture.RunAsync(() =>
+        {
+            var viewModel = CreateViewModel();
+            var window = Show(viewModel);
+
+            viewModel.OpenAppSettingsCommand.Execute(null);
+            Render(window);
+
+            var dialog = window.GetVisualDescendants().OfType<AppSettingsDialogView>().Single();
+            var rows = dialog.GetVisualDescendants().OfType<Border>()
+                .Where(static border => border.Classes.Contains("mm-app-settings-row"))
+                .ToList();
+            Assert.True(rows.Count > 1);
+            Assert.All(rows[..^1], static row => Assert.Equal(new Thickness(0, 0, 0, 1), row.BorderThickness));
+            Assert.Equal(default, rows[^1].BorderThickness);
+
+            var footer = dialog.GetVisualDescendants().OfType<Border>()
+                .Single(static border => border.Classes.Contains("mm-app-settings-footer"));
+            Assert.Equal(new Thickness(0, 1, 0, 0), footer.BorderThickness);
+            Assert.Equal(new Thickness(0, 8, 0, 0), footer.Margin);
+            Assert.Equal(new Thickness(0, 14, 0, 0), footer.Padding);
+            Assert.Equal(8, rows[^1].Padding.Bottom);
+
+            window.Hide();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
     /// Язык выбирают в ComboBox окна настроек. Все шесть переходов между «Системным»,
     /// English и «Русским» — и когда язык интерфейса от выбора меняется, и когда нет
     /// (системный совпадает с выбранным): выбор не откатывается, ComboBox не пустеет,

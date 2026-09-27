@@ -101,7 +101,7 @@
         </Grid>
       </Border>
 
-      <Border Classes="mm-app-settings-row">
+      <Border Classes="mm-app-settings-row mm-app-settings-row-last">
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="16">
           <StackPanel Spacing="4"

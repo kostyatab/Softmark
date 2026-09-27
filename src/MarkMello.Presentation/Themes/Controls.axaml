@@ -1279,8 +1279,8 @@
 
   <!--
     Окно «Настройки» (A-AppSettings) — на той же рамке, карточка шире: 480 px,
-    шапка 52 px, строки настроек 52 px с линией снизу, блок обновлений на заливке
-    вкладки и строка версии со ссылками внизу.
+    шапка 52 px, строки настроек 52 px с линией между ними и строка версии со ссылками
+    внизу под своей линией.
   -->
   <Style Selector="views|ModalDialogFrame.mm-app-settings /template/ Border#PART_Card">
     <Setter Property="Width" Value="480" />
@@ -1320,6 +1320,10 @@
     <Setter Property="BorderThickness" Value="0,0,0,1" />
     <Setter Property="BorderBrush" Value="{DynamicResource MmBorderSoftBrush}" />
   </Style>
+  <!-- Под последней строкой линию даёт футер, своя у неё сложилась бы с ней в двойную -->
+  <Style Selector="Border.mm-app-settings-row.mm-app-settings-row-last">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
 
   <Style Selector="TextBlock.mm-app-settings-label">
     <Setter Property="FontSize" Value="13" />
@@ -1332,16 +1336,8 @@
     <Setter Property="Foreground" Value="{DynamicResource MmTextSoftBrush}" />
   </Style>
 
-  <Style Selector="TextBlock.mm-app-settings-section">
-    <Setter Property="Margin" Value="0,18,0,8" />
-    <Setter Property="FontSize" Value="11" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-    <Setter Property="LetterSpacing" Value="0.5" />
-    <Setter Property="Foreground" Value="{DynamicResource MmTextSoftBrush}" />
-  </Style>
-
   <Style Selector="Border.mm-app-settings-footer">
-    <Setter Property="Margin" Value="0,18,0,0" />
+    <Setter Property="Margin" Value="0,8,0,0" />
     <Setter Property="Padding" Value="0,14,0,0" />
     <Setter Property="BorderThickness" Value="0,1,0,0" />
     <Setter Property="BorderBrush" Value="{DynamicResource MmBorderSoftBrush}" />
