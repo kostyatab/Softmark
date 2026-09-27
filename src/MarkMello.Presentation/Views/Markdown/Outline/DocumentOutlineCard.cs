@@ -35,7 +35,6 @@ internal sealed class DocumentOutlineCard : Border
             Content = _items
         };
         Child = _scroll;
-        _scroll.AddHandler(PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
         LayoutUpdated += OnLayoutUpdated;
     }
 
@@ -125,15 +124,6 @@ internal sealed class DocumentOutlineCard : Border
         {
             e.Handled = true;
             EntryInvoked?.Invoke(this, index);
-        }
-    }
-
-    /// <summary>Шаг колеса тот же, что у документа; у края списка колесо уходит документу.</summary>
-    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
-    {
-        if (ReadingWheelScroll.TryScroll(_scroll, e.Delta))
-        {
-            e.Handled = true;
         }
     }
 

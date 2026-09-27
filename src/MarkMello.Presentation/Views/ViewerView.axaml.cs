@@ -72,7 +72,6 @@ public partial class ViewerView : UserControl, IFindHost
         if (_scroll is not null)
         {
             _scroll.ScrollChanged += OnScrollChanged;
-            _scroll.AddHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged, RoutingStrategies.Tunnel);
         }
 
         AddHandler(KeyDownEvent, OnViewerKeyDown, RoutingStrategies.Tunnel);
@@ -95,7 +94,7 @@ public partial class ViewerView : UserControl, IFindHost
 
             // Рельс и карточка лежат рядом с DocScroll, а не в нём: колесо над ними,
             // которое не прокрутило список карточки, должно крутить документ.
-            _outlineLayer.AddHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged);
+            _outlineLayer.AddHandler(InputElement.PointerWheelChangedEvent, OnOutlineWheelChanged);
         }
 
         SizeChanged += OnOutlineGeometryChanged;
@@ -114,14 +113,13 @@ public partial class ViewerView : UserControl, IFindHost
         {
             _outlineLayer.IsCardSuppressed = null;
             _outlineLayer.EntryInvoked -= OnOutlineEntryInvoked;
-            _outlineLayer.RemoveHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged);
+            _outlineLayer.RemoveHandler(InputElement.PointerWheelChangedEvent, OnOutlineWheelChanged);
             _outlineLayer = null;
         }
 
         if (_scroll is not null)
         {
             _scroll.ScrollChanged -= OnScrollChanged;
-            _scroll.RemoveHandler(InputElement.PointerWheelChangedEvent, OnPointerWheelChanged);
             _scroll = null;
         }
 
@@ -140,12 +138,29 @@ public partial class ViewerView : UserControl, IFindHost
         base.OnDetachedFromVisualTree(e);
     }
 
-    private void OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    /// <summary>
+    /// Колесо над рельсом или карточкой оглавления, которое не прокрутило список карточки,
+    /// передаётся области прокрутки документа: она крутит его штатно, тем же шагом, что и
+    /// над самим документом, — так же Avalonia передаёт колесо с полосы прокрутки.
+    /// </summary>
+    private void OnOutlineWheelChanged(object? sender, PointerWheelEventArgs e)
     {
-        if (_scroll is not null && ReadingWheelScroll.TryScroll(_scroll, e.Delta))
+        if (e.Handled || _scroll?.Presenter is not { } presenter || TopLevel.GetTopLevel(this) is not { } root)
         {
-            e.Handled = true;
+            return;
         }
+
+        var forwarded = new PointerWheelEventArgs(
+            presenter,
+            e.Pointer,
+            root,
+            e.GetPosition(root),
+            e.Timestamp,
+            e.GetCurrentPoint(root).Properties,
+            e.KeyModifiers,
+            e.Delta);
+        presenter.RaiseEvent(forwarded);
+        e.Handled = forwarded.Handled;
     }
 
     private void OnViewerKeyDown(object? sender, KeyEventArgs e)

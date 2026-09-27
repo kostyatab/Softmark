@@ -327,8 +327,8 @@ public sealed class DocumentOutlineRailTests
             window.MouseWheel(cardCentre, new Vector(0, -1));
             Settle(window);
 
-            // Шаг колеса как у документа: SmallChange × ReadingWheelScroll.StepMultiplier.
-            Assert.Equal(list.SmallChange.Height * ReadingWheelScroll.StepMultiplier, list.Offset.Y, 1);
+            // Штатный шаг Avalonia, как у документа: 50 px на единицу дельты.
+            Assert.Equal(ViewerWheelScrollTests.PixelsPerWheelDelta, list.Offset.Y, 1);
             Assert.Equal(documentOffset, DocScroll(window).Offset.Y);
 
             window.Close();
@@ -440,7 +440,7 @@ public sealed class DocumentOutlineRailTests
     private static DocumentOutlineLayer Layer(Window window)
         => window.GetVisualDescendants().OfType<DocumentOutlineLayer>().Single();
 
-    private static ScrollViewer DocScroll(Window window)
+    internal static ScrollViewer DocScroll(Window window)
         => window.GetVisualDescendants().OfType<ScrollViewer>().Single(scroll => scroll.Name == "DocScroll");
 
     private static Control HeadingControl(Window window, string text)
@@ -456,7 +456,7 @@ public sealed class DocumentOutlineRailTests
     }
 
     /// <summary>Оглавление строится с фоновым приоритетом после отрисовки — даём ему пройти.</summary>
-    private static void Settle(Window window)
+    internal static void Settle(Window window)
     {
         for (var pass = 0; pass < 3; pass++)
         {
@@ -466,7 +466,7 @@ public sealed class DocumentOutlineRailTests
     }
 
     /// <summary>Вьюер в окне с темой приложения: без шаблона Fluent у ScrollViewer нет прокрутки.</summary>
-    private static Window Show(ShellViewModel viewModel, double width = 1280)
+    internal static Window Show(ShellViewModel viewModel, double width = 1280)
     {
         var window = ThemedTestWindow.Create(ThemeVariant.Light, new ViewerView { DataContext = viewModel });
         window.Width = width;
@@ -476,7 +476,7 @@ public sealed class DocumentOutlineRailTests
         return window;
     }
 
-    private static async Task<ShellViewModel> CreateViewerAsync(string markdown, InMemorySettingsStore? settings = null)
+    internal static async Task<ShellViewModel> CreateViewerAsync(string markdown, InMemorySettingsStore? settings = null)
     {
         var loader = new StubDocumentLoader();
         loader.Sources[DocumentPath] = new MarkdownSource(DocumentPath, "README.md", markdown);
