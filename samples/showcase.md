@@ -86,6 +86,8 @@ A highlight: <mark>the part worth rereading</mark> in the middle of a sentence, 
 
 Subscript and superscript: H<sub>2</sub>O, CO<sub>2</sub>, E = mc<sup>2</sup>, the 1<sup>st</sup> of May.
 
+The Markdown syntax for them stays as written, as on GitHub: ==not a highlight==, ==**bold** inside==, 12 m^2^. A single tilde strikes through like two, it is not a subscript: H~2~O and ~~struck~~.
+
 ### Inline code and links
 
 Run `dotnet build MarkMello.sln`, then open a file with `Ctrl+O`. A code span with backticks inside: `` `code` ``.
@@ -130,6 +132,10 @@ A long URL without spaces: https://github.com/kostyatab/MarkMello/blob/develop/s
 ### Long paragraph
 
 Reading is the common case. Most of the time a Markdown file arrives from somewhere else, such as a colleague, a repository, a ticket, or a download folder, and the only thing you want is to understand what it says. That moment deserves a quiet window with good typography, a comfortable column width, and nothing that competes with the text for attention. Editing still matters, but it is the exception: you switch into it on purpose, make a change, and switch back. A long paragraph like this one checks the basics of text layout, including line height, wrapping at the edge of the reading column, the rhythm between lines, and how the paragraph sits next to the headings and lists around it. It should read as easily in the narrow column as in the wide one, and in the dark theme as in the light one.
+
+The same paragraph in Russian checks Cyrillic text, which sets wider than Latin:
+
+Чтение — основной сценарий. Чаще всего файл Markdown приходит откуда-то извне: от коллеги, из репозитория, из задачи или из папки загрузок, — и нужно только понять, что в нём написано. Этот момент заслуживает тихого окна с хорошей типографикой, удобной шириной колонки и без всего, что спорит с текстом за внимание. Редактирование тоже важно, но это исключение: в него переходят намеренно, вносят правку и возвращаются.
 
 ## Lists and quotes
 
