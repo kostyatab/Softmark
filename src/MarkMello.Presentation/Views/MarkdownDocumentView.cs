@@ -18,6 +18,7 @@ using MarkMello.Presentation.Clipboard;
 using MarkMello.Presentation.Localization;
 using MarkMello.Presentation.Views.Markdown;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
@@ -115,6 +116,14 @@ public sealed class MarkdownDocumentView : UserControl
     private MarkdownLinkSpan? _pressedLink;
     private IPointer? _capturedPointer;
     private bool _preserveSelectionOnRelease;
+
+    // Протягивание выделения: курсор в координатах видимой части страницы (или
+    // документа, если страницы нет) — эта точка не сдвигается при прокрутке.
+    // Таймер автопрокрутки создаётся, только пока курсор за краем.
+    private ScrollViewer? _dragPage;
+    private Point _dragPointer;
+    private DispatcherTimer? _selectionAutoScrollTimer;
+    private long _selectionAutoScrollTimestamp;
     private MenuItem? _copyMenuItem;
     private MenuItem? _copyLinkMenuItem;
     private MenuItem? _copyTelegramMarkdownMenuItem;
@@ -240,6 +249,7 @@ public sealed class MarkdownDocumentView : UserControl
 
         LayoutUpdated -= OnLayoutUpdatedAfterDocumentRebuild;
         _hasPendingRenderedNotification = false;
+        StopSelectionAutoScroll();
         _readingPreferencesRefreshCts?.Cancel();
         _readingPreferencesRefreshCts?.Dispose();
         _readingPreferencesRefreshCts = null;
@@ -1149,10 +1159,7 @@ public sealed class MarkdownDocumentView : UserControl
         DocumentTextRange match,
         ScrollViewer pageScrollViewer)
     {
-        var blockScrollViewer = fragment.FindAncestorOfType<ScrollViewer>();
-        if (blockScrollViewer is null
-            || ReferenceEquals(blockScrollViewer, pageScrollViewer)
-            || !this.IsVisualAncestorOf(blockScrollViewer)
+        if (FindBlockScrollViewer(fragment, pageScrollViewer) is not { } blockScrollViewer
             || !fragment.TryGetHorizontalExtentForLocalRange(
                 match.Start - fragment.DocumentRange.Start,
                 match.End - fragment.DocumentRange.Start,
@@ -1188,6 +1195,20 @@ public sealed class MarkdownDocumentView : UserControl
         blockScrollViewer.Offset = new Vector(
             Math.Clamp(blockScrollViewer.Offset.X + delta, 0, blockScrollViewer.ScrollBarMaximum.X),
             blockScrollViewer.Offset.Y);
+    }
+
+    /// <summary>
+    /// Область блока кода или таблицы, которая листает фрагмент вбок: ближайший
+    /// <see cref="ScrollViewer"/> над фрагментом, если это не страница и он внутри документа.
+    /// </summary>
+    private ScrollViewer? FindBlockScrollViewer(Visual fragment, ScrollViewer? pageScrollViewer)
+    {
+        var blockScrollViewer = fragment.FindAncestorOfType<ScrollViewer>();
+        return blockScrollViewer is not null
+            && !ReferenceEquals(blockScrollViewer, pageScrollViewer)
+            && this.IsVisualAncestorOf(blockScrollViewer)
+                ? blockScrollViewer
+                : null;
     }
 
     private MarkdownDocumentSelectionFragmentBase? FindFragmentForDocumentOffset(int offset)
@@ -2592,11 +2613,155 @@ public sealed class MarkdownDocumentView : UserControl
         {
             _isDraggingSelection = true;
             Cursor = TryCreateCursor(StandardCursorType.Ibeam);
+            _dragPage = this.FindAncestorOfType<ScrollViewer>();
         }
 
-        var offset = ResolveDocumentOffset(position);
-        SetSelection(SelectionAnchor.Value, offset);
+        _dragPointer = e.GetPosition(GetDragReference());
+        UpdateDragSelection(TimeSpan.Zero);
         e.Handled = true;
+    }
+
+    private Visual GetDragReference()
+        => _dragPage is { } page ? GetViewportVisual(page) : this;
+
+    /// <summary>Видимая часть области: её координаты — от 0 до размера viewport.</summary>
+    private static Visual GetViewportVisual(ScrollViewer scrollViewer)
+        => (Visual?)scrollViewer.Presenter ?? scrollViewer;
+
+    /// <summary>
+    /// Ставит конец выделения по курсору и, если курсор за краем страницы или
+    /// блока кода/таблицы, прокручивает их на шаг длительностью
+    /// <paramref name="elapsed"/>. Пока курсор за краем, конец выделения стоит на
+    /// тексте у края — скрытый текст подтягивает прокрутка.
+    /// </summary>
+    private void UpdateDragSelection(TimeSpan elapsed)
+    {
+        if (SelectionAnchor is not { } anchor)
+        {
+            StopSelectionAutoScroll();
+            return;
+        }
+
+        var page = _dragPage;
+        var documentPoint = _dragPointer;
+        var verticalDirection = 0;
+        if (page is not null)
+        {
+            var viewportHeight = page.Viewport.Height;
+            verticalDirection = MarkdownSelectionAutoScroll.GetDirection(
+                _dragPointer.Y,
+                viewportHeight,
+                MarkdownSelectionAutoScroll.PageEdgeZone,
+                MarkdownSelectionAutoScroll.PageEdgeZone,
+                page.Offset.Y,
+                page.ScrollBarMaximum.Y);
+            var clamped = new Point(_dragPointer.X, MarkdownSelectionAutoScroll.ClampToViewport(_dragPointer.Y, viewportHeight));
+            if (GetViewportVisual(page).TranslatePoint(clamped, this) is not { } translated)
+            {
+                StopSelectionAutoScroll();
+                return;
+            }
+
+            documentPoint = translated;
+        }
+
+        if (!TryResolveFragment(documentPoint, out var fragment, out var localPoint))
+        {
+            StopSelectionAutoScroll();
+            return;
+        }
+
+        var offset = fragment.GetDocumentOffset(localPoint);
+        var horizontalDirection = 0;
+        ScrollViewer? block = null;
+
+        // Вбок листается только блок, на высоте строк которого курсор.
+        if (FindBlockScrollViewer(fragment, page) is { } candidate
+            && this.TranslatePoint(documentPoint, GetViewportVisual(candidate)) is { } pointInBlock
+            && pointInBlock.Y >= 0
+            && pointInBlock.Y <= candidate.Viewport.Height)
+        {
+            var viewportWidth = candidate.Viewport.Width;
+
+            // Таблица прячет край под затуханием: прокрутка начинается, когда
+            // курсор заходит в него со стороны скрытого содержимого.
+            var (startInset, endInset) = candidate.Parent is MarkdownTableHost table
+                ? (table.LeftFade > 0 ? MarkdownTableHost.EdgeFadeWidth : 0, table.RightFade > 0 ? MarkdownTableHost.EdgeFadeWidth : 0)
+                : (0d, 0d);
+            horizontalDirection = MarkdownSelectionAutoScroll.GetDirection(
+                pointInBlock.X, viewportWidth, startInset, endInset, candidate.Offset.X, candidate.ScrollBarMaximum.X);
+            block = candidate;
+
+            var clamped = new Point(MarkdownSelectionAutoScroll.ClampToViewport(pointInBlock.X, viewportWidth), pointInBlock.Y);
+            if (GetViewportVisual(candidate).TranslatePoint(clamped, this) is { } visiblePoint)
+            {
+                offset = ResolveDocumentOffset(visiblePoint);
+            }
+        }
+
+        SetSelection(anchor, offset);
+
+        if (verticalDirection == 0 && horizontalDirection == 0)
+        {
+            StopSelectionAutoScroll();
+            return;
+        }
+
+        // Выделение выше поставлено по раскладке до шага: сдвиг покажется на
+        // следующем тике, когда раскладка уже учтёт новое смещение.
+        if (page is not null && verticalDirection != 0)
+        {
+            page.Offset = new Vector(
+                page.Offset.X,
+                MarkdownSelectionAutoScroll.Step(page.Offset.Y, page.ScrollBarMaximum.Y, verticalDirection, elapsed));
+        }
+
+        if (block is not null && horizontalDirection != 0)
+        {
+            block.Offset = new Vector(
+                MarkdownSelectionAutoScroll.Step(block.Offset.X, block.ScrollBarMaximum.X, horizontalDirection, elapsed),
+                block.Offset.Y);
+        }
+
+        StartSelectionAutoScroll();
+    }
+
+    private void StartSelectionAutoScroll()
+    {
+        if (_selectionAutoScrollTimer is not null)
+        {
+            return;
+        }
+
+        _selectionAutoScrollTimestamp = Stopwatch.GetTimestamp();
+        _selectionAutoScrollTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _selectionAutoScrollTimer.Tick += OnSelectionAutoScrollTick;
+        _selectionAutoScrollTimer.Start();
+    }
+
+    private void StopSelectionAutoScroll()
+    {
+        if (_selectionAutoScrollTimer is not { } timer)
+        {
+            return;
+        }
+
+        _selectionAutoScrollTimer = null;
+        timer.Stop();
+        timer.Tick -= OnSelectionAutoScrollTick;
+    }
+
+    private void OnSelectionAutoScrollTick(object? sender, EventArgs e)
+    {
+        if (!_isDraggingSelection)
+        {
+            StopSelectionAutoScroll();
+            return;
+        }
+
+        var elapsed = Stopwatch.GetElapsedTime(_selectionAutoScrollTimestamp);
+        _selectionAutoScrollTimestamp = Stopwatch.GetTimestamp();
+        UpdateDragSelection(elapsed);
     }
 
     private async void OnPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -3286,8 +3451,11 @@ public sealed class MarkdownDocumentView : UserControl
 
     private void ResetPointerState()
     {
+        StopSelectionAutoScroll();
         _isPointerPressed = false;
         _isDraggingSelection = false;
+        _dragPage = null;
+        _dragPointer = default;
         _preserveSelectionOnRelease = false;
         _pointerPressOrigin = default;
         _pressedFragment = null;
