@@ -14,6 +14,7 @@ using MarkMello.Domain.Workspace;
 using MarkMello.Presentation.Localization;
 using MarkMello.Presentation.ViewModels;
 using MarkMello.Presentation.Views;
+using System.Globalization;
 
 namespace MarkMello.Presentation.Tests;
 
@@ -242,6 +243,117 @@ public sealed class AppMenuAndSettingsWindowTests
         });
     }
 
+    /// <summary>
+    /// Язык выбирают в ComboBox окна настроек. Все шесть переходов между «Системным»,
+    /// English и «Русским» — и когда язык интерфейса от выбора меняется, и когда нет
+    /// (системный совпадает с выбранным): выбор не откатывается, ComboBox не пустеет,
+    /// подписи вариантов идут за языком интерфейса.
+    /// </summary>
+    [Theory]
+    [InlineData("ru-RU")]
+    [InlineData("en-US")]
+    public Task LanguageComboBoxKeepsEverySelection(string systemCulture)
+    {
+        return _fixture.RunAsync(() =>
+        {
+            var previousCulture = CultureInfo.CurrentUICulture;
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(systemCulture);
+            try
+            {
+                var settings = new InMemorySettingsStore { Language = AppLanguage.System };
+                var localization = new LocalizationService(AppLanguage.System);
+                var viewModel = CreateViewModel(localization: localization, settings: settings);
+                var window = Show(viewModel);
+                viewModel.OpenAppSettingsCommand.Execute(null);
+                Render(window);
+
+                var combo = window.GetVisualDescendants().OfType<ComboBox>()
+                    .Single(static box => box.Classes.Contains("mm-language-select"));
+                AppLanguage[] order = [AppLanguage.System, AppLanguage.English, AppLanguage.Russian];
+
+                // Обход задевает каждый из шести переходов ровно раз.
+                AppLanguage[] path =
+                [
+                    AppLanguage.Russian, AppLanguage.English, AppLanguage.System,
+                    AppLanguage.English, AppLanguage.Russian, AppLanguage.System
+                ];
+                var from = AppLanguage.System;
+                foreach (var to in path)
+                {
+                    var step = $"{from} → {to}";
+                    combo.SelectedIndex = Array.IndexOf(order, to);
+                    Render(window);
+
+                    Assert.True(to == viewModel.Language, step);
+                    Assert.True(to == settings.Language, step);
+                    Assert.True(Array.IndexOf(order, to) == combo.SelectedIndex, step);
+                    var selected = Assert.IsType<LanguageSelectionItem>(combo.SelectedItem);
+                    Assert.True(to == selected.Language, step);
+                    Assert.Same(viewModel.SelectedLanguageOption, selected);
+
+                    string[] expectedLabels =
+                    [
+                        localization["LanguageSystem"],
+                        localization["LanguageEnglish"],
+                        localization["LanguageRussian"]
+                    ];
+                    Assert.Equal(expectedLabels, viewModel.LanguageOptions.Select(static option => option.Label));
+                    Assert.Contains(
+                        expectedLabels[Array.IndexOf(order, to)],
+                        combo.GetVisualDescendants().OfType<TextBlock>().Select(static block => block.Text));
+                    from = to;
+                }
+
+                window.Hide();
+            }
+            finally
+            {
+                CultureInfo.CurrentUICulture = previousCulture;
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// Раскрытый список языков при смене языка показывает те же пункты модели и
+    /// перерисовывает их подписи. Окно тестов выше собирается без шаблона Fluent, и popup в нём не открыть,
+    /// поэтому карточка настроек здесь — в окне с темой.
+    /// </summary>
+    [Fact]
+    public Task OpenLanguageListRelabelsItsItemsWhenTheLanguageChanges()
+    {
+        return _fixture.RunAsync(() =>
+        {
+            var viewModel = CreateViewModel(localization: new LocalizationService(AppLanguage.English));
+            var window = ThemedTestWindow.Create(ThemeVariant.Light, new AppSettingsDialogView { DataContext = viewModel });
+            window.Show();
+            Render(window);
+
+            var combo = window.GetVisualDescendants().OfType<ComboBox>()
+                .Single(static box => box.Classes.Contains("mm-language-select"));
+            combo.IsDropDownOpen = true;
+            Render(window);
+            var items = combo.GetRealizedContainers().OfType<ComboBoxItem>().ToList();
+            var options = items.Select(static item => item.Content).ToList();
+            Assert.Equal(["System", "English", "Russian"], Labels(items));
+
+            combo.SelectedIndex = 2;
+            Render(window);
+
+            Assert.Equal(AppLanguage.Russian, viewModel.Language);
+            items = combo.GetRealizedContainers().OfType<ComboBoxItem>().ToList();
+            Assert.True(options.SequenceEqual(items.Select(static item => item.Content), ReferenceEqualityComparer.Instance));
+            Assert.Equal(["Системный", "Английский", "Русский"], Labels(items));
+
+            window.Close();
+            return Task.CompletedTask;
+        });
+
+        static IEnumerable<string?> Labels(IEnumerable<ComboBoxItem> items)
+            => items.Select(static item => item.GetVisualDescendants().OfType<TextBlock>().Single().Text);
+    }
+
     private static IEnumerable<Button> VisibleMenuItems(Window window)
         => window.GetControl<ContentControl>("AppMenuPanel")
             .GetVisualDescendants()
@@ -318,7 +430,8 @@ public sealed class AppMenuAndSettingsWindowTests
     private static ShellViewModel CreateViewModel(
         FakeWorkspaceFileSystem? fileSystem = null,
         RecordingWindowLauncher? launcher = null,
-        LocalizationService? localization = null)
+        LocalizationService? localization = null,
+        InMemorySettingsStore? settings = null)
     {
         var loader = new StubDocumentLoader();
         loader.Sources[Readme] = new MarkdownSource(Readme, "README.md", "# readme");
@@ -331,7 +444,7 @@ public sealed class AppMenuAndSettingsWindowTests
             new StubFilePicker(),
             new StubCommandLineActivation(),
             localization ?? new LocalizationService(AppLanguage.English),
-            new InMemorySettingsStore(),
+            settings ?? new InMemorySettingsStore(),
             new RecordingThemeService(),
             new RecordingStartupMetrics(),
             new RenderMarkdownDocumentUseCase(new TestMarkdownRenderer(), new FakeDiagramRenderService()),

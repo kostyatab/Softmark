@@ -28,6 +28,9 @@ public partial class ShellViewModel
 
     private IReadOnlyList<LanguageSelectionItem>? _languageOptions;
 
+    // Список один на всё время жизни: ComboBox пишет выбор обратно в модель, и если
+    // подменить ItemsSource посреди выбора, он находит в новом списке прежний пункт и
+    // откатывает выбор. При смене языка меняются только подписи пунктов.
     public IReadOnlyList<LanguageSelectionItem> LanguageOptions =>
         _languageOptions ??= CreateLanguageOptions();
 
@@ -428,7 +431,7 @@ public partial class ShellViewModel
 
     private void RefreshLocalizedProperties()
     {
-        _languageOptions = CreateLanguageOptions();
+        RefreshLanguageOptionLabels();
 
         NotifyLocalizedBindingPropertiesChanged();
         EditorSession?.RefreshLocalizedProperties();
@@ -437,8 +440,6 @@ public partial class ShellViewModel
         OnPropertyChanged(nameof(IsSystemLanguageSelected));
         OnPropertyChanged(nameof(IsEnglishLanguageSelected));
         OnPropertyChanged(nameof(IsRussianLanguageSelected));
-        OnPropertyChanged(nameof(LanguageOptions));
-        OnPropertyChanged(nameof(SelectedLanguageOption));
         OnPropertyChanged(nameof(ReadingStatusLabel));
         OnPropertyChanged(nameof(FontSizeLabel));
         OnPropertyChanged(nameof(LineHeightLabel));
@@ -457,10 +458,31 @@ public partial class ShellViewModel
 
     private IReadOnlyList<LanguageSelectionItem> CreateLanguageOptions() =>
     [
-        new(AppLanguage.System, _localization["LanguageSystem"]),
-        new(AppLanguage.English, _localization["LanguageEnglish"]),
-        new(AppLanguage.Russian, _localization["LanguageRussian"])
+        new(AppLanguage.System, _localization[LanguageLabelKey(AppLanguage.System)]),
+        new(AppLanguage.English, _localization[LanguageLabelKey(AppLanguage.English)]),
+        new(AppLanguage.Russian, _localization[LanguageLabelKey(AppLanguage.Russian)])
     ];
+
+    private void RefreshLanguageOptionLabels()
+    {
+        if (_languageOptions is null)
+        {
+            return;
+        }
+
+        foreach (var option in _languageOptions)
+        {
+            option.Label = _localization[LanguageLabelKey(option.Language)];
+        }
+    }
+
+    private static string LanguageLabelKey(AppLanguage language)
+        => language switch
+        {
+            AppLanguage.English => "LanguageEnglish",
+            AppLanguage.Russian => "LanguageRussian",
+            _ => "LanguageSystem"
+        };
 
     private void SetDirtyPrompt(PendingDirtyActionKind kind)
     {
@@ -655,8 +677,22 @@ public partial class ShellViewModel
 
 }
 
-public sealed record LanguageSelectionItem(AppLanguage Language, string Label)
+/// <summary>
+/// Пункт выбора языка. Равенство — по ссылке: ComboBox должен узнавать свой пункт, а не
+/// равный ему по значению из другого списка.
+/// </summary>
+public sealed class LanguageSelectionItem(AppLanguage language, string label) : ObservableObject
 {
+    private string _label = label;
+
+    public AppLanguage Language { get; } = language;
+
+    public string Label
+    {
+        get => _label;
+        set => SetProperty(ref _label, value);
+    }
+
     public override string ToString() => Label;
 }
 

@@ -979,20 +979,28 @@ public sealed class ShellViewModelTests
     public void SelectedLanguageOptionPersistsLanguageAndRefreshesDropdownLabels()
     {
         var harness = CreateHarness();
-        var initialOptions = harness.ViewModel.LanguageOptions;
-        var russianOption = initialOptions.Single(option => option.Language == AppLanguage.Russian);
+        var options = harness.ViewModel.LanguageOptions;
+        var englishOption = options.Single(option => option.Language == AppLanguage.English);
+        var russianOption = options.Single(option => option.Language == AppLanguage.Russian);
+        var relabelled = new List<AppLanguage>();
+        foreach (var option in options)
+        {
+            option.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(LanguageSelectionItem.Label))
+                {
+                    relabelled.Add(option.Language);
+                }
+            };
+        }
 
         harness.ViewModel.SelectedLanguageOption = russianOption;
 
-        var refreshedOptions = harness.ViewModel.LanguageOptions;
-
         Assert.Equal(AppLanguage.Russian, harness.Settings.Language);
-        Assert.Equal(AppLanguage.Russian, harness.ViewModel.SelectedLanguageOption?.Language);
-        Assert.NotSame(initialOptions, refreshedOptions);
-        Assert.Same(
-            refreshedOptions.Single(option => option.Language == AppLanguage.Russian),
-            harness.ViewModel.SelectedLanguageOption);
-        Assert.Equal("Английский", refreshedOptions.Single(option => option.Language == AppLanguage.English).Label);
+        Assert.Same(options, harness.ViewModel.LanguageOptions);
+        Assert.Same(russianOption, harness.ViewModel.SelectedLanguageOption);
+        Assert.Equal("Английский", englishOption.Label);
+        Assert.Contains(AppLanguage.English, relabelled);
         Assert.Equal("0 слов · 1 мин", harness.ViewModel.ReadingStatusLabel);
     }
 
@@ -1010,8 +1018,9 @@ public sealed class ShellViewModelTests
         Assert.Contains(nameof(ShellViewModel.WelcomeTagline), names);
         Assert.Contains(nameof(ShellViewModel.AppMenuSettings), names);
         Assert.Contains(nameof(ShellViewModel.AppMenuCheckForUpdates), names);
-        Assert.Contains(nameof(ShellViewModel.LanguageOptions), names);
         Assert.Contains(nameof(ShellViewModel.SelectedLanguageOption), names);
+        // Список языков не подменяется: ComboBox не должен терять выбор посреди записи.
+        Assert.DoesNotContain(nameof(ShellViewModel.LanguageOptions), names);
         Assert.DoesNotContain("Item", names);
         Assert.DoesNotContain("Item[]", names);
         Assert.Equal("Тихое место для чтения Markdown.", harness.ViewModel.WelcomeTagline);
@@ -1023,14 +1032,18 @@ public sealed class ShellViewModelTests
     public void LanguageOptionsKeepsStableItemReferencesBetweenLocalizationChanges()
     {
         var harness = CreateHarness();
+        var options = harness.ViewModel.LanguageOptions;
+        var systemOption = options.Single(option => option.Language == AppLanguage.System);
 
-        var firstRead = harness.ViewModel.LanguageOptions;
-        var secondRead = harness.ViewModel.LanguageOptions;
+        Assert.Same(systemOption, harness.ViewModel.SelectedLanguageOption);
 
-        Assert.Same(firstRead, secondRead);
-        Assert.Same(
-            firstRead.Single(option => option.Language == AppLanguage.System),
-            harness.ViewModel.SelectedLanguageOption);
+        harness.ViewModel.SelectRussianLanguageCommand.Execute(null);
+        harness.ViewModel.SelectSystemLanguageCommand.Execute(null);
+
+        Assert.Same(options, harness.ViewModel.LanguageOptions);
+        Assert.Same(systemOption, harness.ViewModel.SelectedLanguageOption);
+        // Равенство по ссылке: пункт с тем же языком и подписью — другой пункт.
+        Assert.NotEqual(new LanguageSelectionItem(systemOption.Language, systemOption.Label), systemOption);
     }
 
     [Theory]
