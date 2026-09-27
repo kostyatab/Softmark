@@ -77,62 +77,66 @@
     </Style>
   </UserControl.Styles>
 
-  <Border Name="UpdateHalo"
-          Classes="mm-update-halo"
-          HorizontalAlignment="Right"
-          Margin="-274,-4,-4,-4">
-    <Button Name="UpdateButton"
-            Classes="mm-update-button"
-            Classes.mm-downloading="{Binding IsButtonDownloading}"
-            AutomationProperties.Name="{Binding ButtonAutomationName}"
-            Command="{Binding ButtonCommand}">
-      <StackPanel Orientation="Horizontal">
-        <!-- Обводка толще обычных 1.75 — как на холсте варианта D: светлая линия на
-             залитом акцентом квадрате при 1.75 истончается и теряется. Галочке — ещё
-             чуть толще: у неё одна короткая линия против трёх у стрелки. -->
-        <Panel Width="30"
-               Height="30">
-          <views:LucideIcon Name="UpdateArrowIcon"
-                            Data="{DynamicResource LucideArrowDownToLineGeometry}"
-                            Width="14"
-                            Height="14"
-                            StrokeThickness="2.2"
-                            IsVisible="{Binding ShowsButtonArrow}" />
-          <views:ProgressRing Name="UpdateProgressRing"
-                              Width="16"
-                              Height="16"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"
-                              IsVisible="{Binding IsButtonDownloading}"
-                              Value="{Binding ButtonProgress}" />
-          <views:LucideIcon Name="UpdateCheckIcon"
-                            Data="{DynamicResource LucideCheckGeometry}"
-                            Width="14"
-                            Height="14"
-                            StrokeThickness="2.4"
-                            IsVisible="{Binding ShowsButtonCheck}" />
-        </Panel>
-        <!-- Ширину надписи ведёт code-behind: 0 в покое, по тексту при наведении и фокусе
-             с клавиатуры, с переходом 150 мс. Обрезка прячет текст, пока плашка растёт. -->
-        <Border Name="UpdateLabelHost"
-                Width="0"
-                ClipToBounds="True">
-          <Border.Transitions>
-            <Transitions>
-              <DoubleTransition Property="Width"
-                                Duration="0:0:0.15">
-                <DoubleTransition.Easing>
-                  <CubicEaseOut />
-                </DoubleTransition.Easing>
-              </DoubleTransition>
-            </Transitions>
-          </Border.Transitions>
-          <TextBlock Name="UpdateLabel"
-                     Classes="mm-update-label"
-                     HorizontalAlignment="Left"
-                     Text="{Binding ButtonLabel}" />
-        </Border>
-      </StackPanel>
-    </Button>
-  </Border>
+  <!-- Отрицательный отступ даёт место, а не размер: контейнер растянут на всё выделенное
+       место, 308 px, какой бы ни была надпись. Поэтому он прозрачный и мышь не ловит, а
+       подложка внутри прижата вправо и по ширине облегает плашку. -->
+  <Panel Margin="-274,-4,-4,-4">
+    <Border Name="UpdateHalo"
+            Classes="mm-update-halo"
+            HorizontalAlignment="Right">
+      <Button Name="UpdateButton"
+              Classes="mm-update-button"
+              Classes.mm-downloading="{Binding IsButtonDownloading}"
+              AutomationProperties.Name="{Binding ButtonAutomationName}"
+              Command="{Binding ButtonCommand}">
+        <StackPanel Orientation="Horizontal">
+          <!-- Обводка толще обычных 1.75 — как на холсте варианта D: светлая линия на
+               залитом акцентом квадрате при 1.75 истончается и теряется. Галочке — ещё
+               чуть толще: у неё одна короткая линия против трёх у стрелки. -->
+          <Panel Width="30"
+                 Height="30">
+            <views:LucideIcon Name="UpdateArrowIcon"
+                              Data="{DynamicResource LucideArrowDownToLineGeometry}"
+                              Width="14"
+                              Height="14"
+                              StrokeThickness="2.2"
+                              IsVisible="{Binding ShowsButtonArrow}" />
+            <views:ProgressRing Name="UpdateProgressRing"
+                                Width="16"
+                                Height="16"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsButtonDownloading}"
+                                Value="{Binding ButtonProgress}" />
+            <views:LucideIcon Name="UpdateCheckIcon"
+                              Data="{DynamicResource LucideCheckGeometry}"
+                              Width="14"
+                              Height="14"
+                              StrokeThickness="2.4"
+                              IsVisible="{Binding ShowsButtonCheck}" />
+          </Panel>
+          <!-- Ширину надписи ведёт code-behind: 0 в покое, по тексту при наведении и фокусе
+               с клавиатуры, с переходом 150 мс. Обрезка прячет текст, пока плашка растёт. -->
+          <Border Name="UpdateLabelHost"
+                  Width="0"
+                  ClipToBounds="True">
+            <Border.Transitions>
+              <Transitions>
+                <DoubleTransition Property="Width"
+                                  Duration="0:0:0.15">
+                  <DoubleTransition.Easing>
+                    <CubicEaseOut />
+                  </DoubleTransition.Easing>
+                </DoubleTransition>
+              </Transitions>
+            </Border.Transitions>
+            <TextBlock Name="UpdateLabel"
+                       Classes="mm-update-label"
+                       HorizontalAlignment="Left"
+                       Text="{Binding ButtonLabel}" />
+          </Border>
+        </StackPanel>
+      </Button>
+    </Border>
+  </Panel>
 </UserControl>

@@ -171,6 +171,52 @@ public sealed class UpdateNotificationButtonTests
         });
     }
 
+    /// <summary>
+    /// Раскрытая подложка облегает плашку — по 4 px с каждой стороны, какой бы ни была
+    /// надпись. Левее неё мышь достаётся вкладкам, и надпись там сворачивается.
+    /// </summary>
+    [Theory]
+    [InlineData("available", AppLanguage.English)]
+    [InlineData("downloading", AppLanguage.English)]
+    [InlineData("downloaded", AppLanguage.English)]
+    [InlineData("available", AppLanguage.Russian)]
+    [InlineData("downloading", AppLanguage.Russian)]
+    [InlineData("downloaded", AppLanguage.Russian)]
+    public Task ExpandedHaloHugsTheLabel(string state, AppLanguage language)
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var (updates, _, coordinator) = await UpdateWindowTests.CreateInStateAsync(state, localization: new LocalizationService(language));
+            var window = Show(CreateShell(updates));
+            var button = window.GetVisualDescendants().OfType<UpdateNotificationButton>().Single();
+            var halo = button.GetControl<Border>("UpdateHalo");
+            var updateButton = button.GetControl<Button>("UpdateButton");
+            var labelHost = button.GetControl<Border>("UpdateLabelHost");
+
+            // Без перехода надпись выезжает сразу: подложка меряется по полной ширине плашки.
+            labelHost.Transitions = null;
+            window.MouseMove(Center(updateButton, window));
+            Render(window);
+
+            Assert.True(button.IsExpanded);
+            Assert.True(labelHost.Bounds.Width > 30);
+            Assert.Equal(labelHost.Width, labelHost.Bounds.Width);
+            Assert.Equal(updateButton.Bounds.Width + 8, halo.Bounds.Width);
+            Assert.Equal(updateButton.Bounds.Height + 8, halo.Bounds.Height);
+
+            var besideHalo = updateButton.TranslatePoint(new Point(-4 - 10, updateButton.Bounds.Height / 2), window)!.Value;
+            var hit = window.InputHitTest(besideHalo) as Visual;
+            Assert.False(hit is not null && (ReferenceEquals(hit, button) || hit.GetVisualAncestors().Contains(button)));
+
+            window.MouseMove(besideHalo);
+            Render(window);
+
+            Assert.False(button.IsExpanded);
+            coordinator.CancelDownload();
+            window.Close();
+        });
+    }
+
     /// <summary>Во время загрузки надпись — проценты; кольцо показывает ту же долю.</summary>
     [Fact]
     public Task DownloadingLabelShowsPercent()
