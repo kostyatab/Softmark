@@ -36,6 +36,16 @@ public partial class ViewerView : UserControl, IFindHost
     // мигать и не дёргать широкие таблицы, но по его устаревшим пунктам не ходим.
     private bool _isOutlineStale;
 
+    /// <summary>Смещение в пределах пикселя от поставленного переходом — всё ещё оно: смещение дробное.</summary>
+    private const double OutlineHeldOffsetTolerance = 1;
+
+    // Пункт, к которому только что перешли, текущий, пока документ стоит там, куда
+    // его поставил переход: иначе короткий раздел или раздел у конца документа
+    // подсветил бы соседа. Любая другая прокрутка, перерисовка документа или сдвиг
+    // раскладки снимают удержание; докраска кода — нет, она меняет только цвета.
+    private int _heldOutlineIndex = -1;
+    private double _heldOutlineOffset;
+
     public ViewerView()
     {
         InitializeComponent();
@@ -82,6 +92,7 @@ public partial class ViewerView : UserControl, IFindHost
             _documentView.DocumentRendered += OnDocumentRendered;
             _documentView.DocumentRenderInvalidated += OnDocumentRenderInvalidated;
             _documentView.MarkdownFileLinkRequested += OnMarkdownFileLinkRequested;
+            _documentView.HeadingAnchorNavigated += OnHeadingAnchorNavigated;
             _documentView.SearchStateChanged += OnDocumentSearchStateChanged;
             _documentView.SizeChanged += OnOutlineGeometryChanged;
         }
@@ -130,6 +141,7 @@ public partial class ViewerView : UserControl, IFindHost
             _documentView.DocumentRendered -= OnDocumentRendered;
             _documentView.DocumentRenderInvalidated -= OnDocumentRenderInvalidated;
             _documentView.MarkdownFileLinkRequested -= OnMarkdownFileLinkRequested;
+            _documentView.HeadingAnchorNavigated -= OnHeadingAnchorNavigated;
             _documentView.SearchStateChanged -= OnDocumentSearchStateChanged;
             _documentView.SizeChanged -= OnOutlineGeometryChanged;
             _documentView = null;
@@ -308,6 +320,7 @@ public partial class ViewerView : UserControl, IFindHost
         }
 
         _hasRenderedDocument = false;
+        ReleaseHeldOutlineEntry();
 
         // Пустой документ не присылает DocumentRendered — рельс прячется сразу.
         if (_documentView?.Document is not { Blocks.Count: > 0 })
@@ -403,6 +416,8 @@ public partial class ViewerView : UserControl, IFindHost
     {
         if (_hasRenderedDocument)
         {
+            // Заголовки переехали — смещение перехода к ним больше ничего не значит.
+            ReleaseHeldOutlineEntry();
             QueueOutlineBuild();
         }
     }
@@ -505,13 +520,27 @@ public partial class ViewerView : UserControl, IFindHost
     }
 
     private int FindCurrentOutlineEntry()
-        => _scroll is null
-            ? 0
-            : Math.Max(0, DocumentOutline.FindCurrentEntry(
-                _outlineHeadingTops,
-                _scroll.Offset.Y,
-                _scroll.ScrollBarMaximum.Y,
-                _scroll.Viewport.Height));
+    {
+        if (_scroll is null)
+        {
+            return 0;
+        }
+
+        if (_heldOutlineIndex >= 0)
+        {
+            if (Math.Abs(_scroll.Offset.Y - _heldOutlineOffset) <= OutlineHeldOffsetTolerance)
+            {
+                return _heldOutlineIndex;
+            }
+
+            ReleaseHeldOutlineEntry();
+        }
+
+        return Math.Max(0, DocumentOutline.FindCurrentEntry(
+            _outlineHeadingTops,
+            _scroll.Offset.Y,
+            _scroll.ScrollBarMaximum.Y));
+    }
 
     private void UpdateOutlineCurrentEntry()
     {
@@ -523,6 +552,7 @@ public partial class ViewerView : UserControl, IFindHost
 
     private void HideOutline()
     {
+        ReleaseHeldOutlineEntry();
         _isOutlineStale = false;
         _outlineHeadingTops = [];
         _outlineLayer?.Hide();
@@ -539,6 +569,51 @@ public partial class ViewerView : UserControl, IFindHost
             return;
         }
 
-        _documentView?.TryScrollToTopLevelHeading(_outline.Entries[index].BlockIndex);
+        if (_documentView?.TryScrollToTopLevelHeading(_outline.Entries[index].BlockIndex) == true)
+        {
+            HoldOutlineEntry(index);
+        }
     }
+
+    private void OnHeadingAnchorNavigated(object? sender, int blockIndex)
+    {
+        if (_isOutlineStale || _outlineHeadingTops.Length == 0)
+        {
+            return;
+        }
+
+        var entries = _outline.Entries;
+        for (var index = 0; index < entries.Count; index++)
+        {
+            if (entries[index].BlockIndex == blockIndex)
+            {
+                HoldOutlineEntry(index);
+                return;
+            }
+        }
+
+        // Заголовка нет в рельсе (H4 и ниже, внутри цитаты) — удержание прежнего
+        // перехода снимается, даже если смещение не изменилось: текущий пункт найдёт
+        // обычное правило.
+        ReleaseHeldOutlineEntry();
+        UpdateOutlineCurrentEntry();
+    }
+
+    /// <summary>
+    /// Переход уже выставил смещение: пункт становится текущим сразу — даже если
+    /// смещение не изменилось и ScrollChanged не придёт.
+    /// </summary>
+    private void HoldOutlineEntry(int index)
+    {
+        if (_scroll is null)
+        {
+            return;
+        }
+
+        _heldOutlineIndex = index;
+        _heldOutlineOffset = _scroll.Offset.Y;
+        UpdateOutlineCurrentEntry();
+    }
+
+    private void ReleaseHeldOutlineEntry() => _heldOutlineIndex = -1;
 }

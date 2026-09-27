@@ -6,8 +6,10 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using MarkMello.Application.Abstractions;
 using MarkMello.Application.UseCases;
 using MarkMello.Domain;
+using MarkMello.Domain.Outline;
 using MarkMello.Infrastructure.Markdown;
 using MarkMello.Presentation.Localization;
 using MarkMello.Presentation.ViewModels;
@@ -116,6 +118,215 @@ public sealed class DocumentOutlineRailTests
             var heading = HeadingControl(window, "Two");
             var top = heading.TranslatePoint(default, DocScroll(window))!.Value.Y;
             Assert.Equal(ScrollTopInset, top, 1);
+            Assert.Equal(1, layer.Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task FirstEntryIsCurrentAtTheTopWhileTheSecondHeadingIsInView()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            // Как samples/sample.md: короткое вступление, второй заголовок виден сразу.
+            var markdown = "# Title\n\nA short introduction.\n\n" + Sections("Second", "Third");
+            var window = Show(await CreateViewerAsync(markdown));
+
+            // Старое правило — треть окна документа: «Second» выше неё, и он подсветился бы.
+            var oldReadingLine = DocScroll(window).Viewport.Height / 3;
+            Assert.True(HeadingTop(window, "Second") < oldReadingLine, $"Second at {HeadingTop(window, "Second")}, line {oldReadingLine}");
+            Assert.Equal(0, Layer(window).Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task ClickingTheEntryOfAShortSectionMakesItCurrent()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var window = Show(await CreateViewerAsync(Sections("One") + "## Two\n\n### Three\n\n" + Filler));
+            var layer = Layer(window);
+
+            ClickCardItem(window, 1);
+
+            // Следующий заголовок встаёт на линию чтения: без удержания подсветку решало бы округление.
+            Assert.True(
+                HeadingTop(window, "Three") <= DocumentOutline.ReadingLineOffset,
+                $"Three at {HeadingTop(window, "Three")}");
+            Assert.Equal(1, layer.Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task ClickingAnEntryNearTheEndMakesItCurrent()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var window = Show(await CreateViewerAsync(Sections("One", "Two") + "## Three\n\n## Four\n\nThe end.\n"));
+            var layer = Layer(window);
+            var scroll = DocScroll(window);
+
+            ClickCardItem(window, 2);
+
+            Assert.Equal(scroll.ScrollBarMaximum.Y, scroll.Offset.Y, 1);
+            Assert.Equal(2, layer.Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task NavigationThatDoesNotMoveTheDocumentStillMakesTheEntryCurrent()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var window = Show(await CreateViewerAsync(Sections("One", "Two") + "## Three\n\n## Four\n\nThe end.\n"));
+            var layer = Layer(window);
+            var scroll = DocScroll(window);
+
+            ClickCardItem(window, 3);
+            var offset = scroll.Offset.Y;
+            Assert.Equal(3, layer.Rail!.CurrentIndex);
+
+            // «Three» у самого конца — переход к нему упирается в тот же максимум.
+            ClickCardItem(window, 2);
+
+            Assert.Equal(offset, scroll.Offset.Y);
+            Assert.Equal(2, layer.Rail.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task AnchorLinkToAnOutlineHeadingMakesItCurrent()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var window = Show(await CreateViewerAsync(Sections("One", "Two") + "## Three\n\n## Four\n\nThe end.\n"));
+            var layer = Layer(window);
+
+            Assert.True(DocumentView(window).TryScrollToHeadingAnchor("#three"));
+            Settle(window);
+
+            Assert.Equal(2, layer.Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task AnchorLinkToAHeadingOutsideTheOutlineUsesTheReadingLine()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var markdown = Sections("One") + "#### Deep\n\n" + Filler + "\n\n" + Sections("Two", "Three");
+            var window = Show(await CreateViewerAsync(markdown));
+            var layer = Layer(window);
+            ClickCardItem(window, 2);
+
+            // H4 в рельс не входит: текущий — раздел, в котором он лежит.
+            Assert.True(DocumentView(window).TryScrollToHeadingAnchor("#deep"));
+            Settle(window);
+
+            Assert.Equal(0, layer.Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task AnchorLinkToAQuotedHeadingReleasesTheNavigatedEntryEvenWithoutMoving()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var window = Show(await CreateViewerAsync(Sections("One", "Two") + "## Three\n\n> ## Quoted\n\n## Four\n\nThe end.\n"));
+            var layer = Layer(window);
+            var scroll = DocScroll(window);
+            ClickCardItem(window, 2);
+            var offset = scroll.Offset.Y;
+            Assert.Equal(2, layer.Rail!.CurrentIndex);
+
+            // Цитата у самого конца — переход к ней упирается в тот же максимум.
+            Assert.True(DocumentView(window).TryScrollToHeadingAnchor("#quoted"));
+            Settle(window);
+
+            Assert.Equal(offset, scroll.Offset.Y);
+            Assert.Equal(3, layer.Rail.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task CodeHighlightingKeepsTheNavigatedEntry()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            using var highlighter = new GatedHighlighter();
+            var markdown = "```cs\nvar x = 1;\n```\n\n" + Sections("One", "Two") + "## Three\n\n## Four\n\nThe end.\n";
+            var viewModel = await CreateViewerAsync(markdown, highlightCodeBlocks: new HighlightCodeBlocksUseCase(highlighter));
+            var window = Show(viewModel);
+            var layer = Layer(window);
+            Assert.NotNull(viewModel.CodeHighlighting);
+            ClickCardItem(window, 2);
+
+            highlighter.Open();
+            await viewModel.CodeHighlighting!;
+            Settle(window);
+
+            Assert.Equal(2, layer.Rail!.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task ScrollingAfterNavigationReturnsToTheReadingLine()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var window = Show(await CreateViewerAsync(Sections("One", "Two") + "## Three\n\n## Four\n\nThe end.\n"));
+            var layer = Layer(window);
+            var scroll = DocScroll(window);
+            ClickCardItem(window, 2);
+            Assert.Equal(2, layer.Rail!.CurrentIndex);
+
+            scroll.Offset = new Vector(0, 0);
+            Settle(window);
+            Assert.Equal(0, layer.Rail.CurrentIndex);
+
+            // Вернулись к тому же смещению прокруткой, а не переходом — действует «в конце — последний».
+            scroll.Offset = new Vector(0, scroll.ScrollBarMaximum.Y);
+            Settle(window);
+            Assert.Equal(3, layer.Rail.CurrentIndex);
+
+            window.Close();
+        });
+    }
+
+    [Fact]
+    public Task RerenderingReleasesTheNavigatedEntry()
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var viewModel = await CreateViewerAsync(Sections("One", "Two") + "## Three\n\n## Four\n\nThe end.\n");
+            var window = Show(viewModel);
+            var layer = Layer(window);
+            ClickCardItem(window, 2);
+
+            window.Height = 700;
+            Settle(window);
+
+            // Окно ниже — прокрутка больше не в конце, и по линии чтения текущим был бы не «Three».
+            var scroll = DocScroll(window);
+            Assert.True(scroll.Offset.Y < scroll.ScrollBarMaximum.Y - 1);
+            Assert.True(HeadingTop(window, "Three") > DocumentOutline.ReadingLineOffset, $"Three at {HeadingTop(window, "Three")}");
             Assert.Equal(1, layer.Rail!.CurrentIndex);
 
             window.Close();
@@ -424,18 +635,32 @@ public sealed class DocumentOutlineRailTests
     }
 
     private static string Sections(params string[] titles)
-    {
-        var filler = string.Join(
-            "\n\n",
-            Enumerable.Range(0, 30).Select(static index => $"Paragraph {index} keeps the section long enough to scroll."));
-        return string.Concat(titles.Select(title => $"## {title}\n\n{filler}\n\n"));
-    }
+        => string.Concat(titles.Select(static title => $"## {title}\n\n{Filler}\n\n"));
+
+    private static string Filler { get; } = string.Join(
+        "\n\n",
+        Enumerable.Range(0, 30).Select(static index => $"Paragraph {index} keeps the section long enough to scroll."));
 
     private static object? Resource(Window window, string key)
     {
         Assert.True(window.TryFindResource(key, window.ActualThemeVariant, out var value));
         return value;
     }
+
+    private static void ClickCardItem(Window window, int index)
+    {
+        var layer = Layer(window);
+        layer.OpenCard();
+        Settle(window);
+        layer.Card!.Items[index].RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        Settle(window);
+    }
+
+    private static double HeadingTop(Window window, string text)
+        => HeadingControl(window, text).TranslatePoint(default, DocScroll(window))!.Value.Y;
+
+    private static MarkdownDocumentView DocumentView(Window window)
+        => window.GetVisualDescendants().OfType<MarkdownDocumentView>().Single();
 
     private static DocumentOutlineLayer Layer(Window window)
         => window.GetVisualDescendants().OfType<DocumentOutlineLayer>().Single();
@@ -476,7 +701,10 @@ public sealed class DocumentOutlineRailTests
         return window;
     }
 
-    internal static async Task<ShellViewModel> CreateViewerAsync(string markdown, InMemorySettingsStore? settings = null)
+    internal static async Task<ShellViewModel> CreateViewerAsync(
+        string markdown,
+        InMemorySettingsStore? settings = null,
+        HighlightCodeBlocksUseCase? highlightCodeBlocks = null)
     {
         var loader = new StubDocumentLoader();
         loader.Sources[DocumentPath] = new MarkdownSource(DocumentPath, "README.md", markdown);
@@ -499,11 +727,32 @@ public sealed class DocumentOutlineRailTests
             new WorkspaceFileOperationsUseCase(fileSystem, new FakePlatformServices()),
             new FakePlatformServices(),
             static () => new FakeWorkspaceWatcher(),
-            new RecordingWindowLauncher());
+            new RecordingWindowLauncher(),
+            highlightCodeBlocks: highlightCodeBlocks);
 
         await viewModel.InitializeAsync();
         await viewModel.OpenPathAsync(DocumentPath);
         Assert.True(viewModel.IsViewer);
         return viewModel;
+    }
+
+    /// <summary>Докраска, которая ждёт разрешения теста: успевает случиться после перехода.</summary>
+    private sealed class GatedHighlighter : ICodeHighlighter, IDisposable
+    {
+        private readonly ManualResetEventSlim _gate = new();
+
+        public void Open() => _gate.Set();
+
+        public IReadOnlyList<MarkdownCodeToken>? Highlight(
+            string language,
+            string code,
+            TimeSpan timeout,
+            CancellationToken cancellationToken)
+        {
+            _gate.Wait(cancellationToken);
+            return [new MarkdownCodeToken(0, code.Length, MarkdownCodeTokenKind.Keyword)];
+        }
+
+        public void Dispose() => _gate.Dispose();
     }
 }

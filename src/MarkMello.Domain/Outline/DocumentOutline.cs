@@ -20,6 +20,12 @@ public sealed class DocumentOutline
     /// <summary>Меньше двух разделов — рельсу нечего показывать.</summary>
     public const int MinimumEntryCount = 2;
 
+    /// <summary>
+    /// Линия чтения — на столько ниже верха окна документа: раздел становится текущим,
+    /// когда его заголовок поднялся к верху окна, а не когда он только показался.
+    /// </summary>
+    public const double ReadingLineOffset = 80;
+
     /// <summary>Прокрутка в пределах пикселя от конца считается концом: смещение дробное.</summary>
     private const double ScrollEndTolerance = 1;
 
@@ -57,20 +63,19 @@ public sealed class DocumentOutline
     }
 
     /// <summary>
-    /// Текущий раздел: последний заголовок, верх которого выше верхней трети окна; до
-    /// первого заголовка — первый; в конце прокрутки — последний, иначе короткий
-    /// последний раздел никогда не стал бы текущим.
+    /// Текущий раздел: последний заголовок, верх которого выше линии чтения в
+    /// <see cref="ReadingLineOffset"/> от верха окна; пока первый заголовок до неё не
+    /// дошёл — первый; в конце прокрутки — последний, иначе короткий последний раздел
+    /// никогда не стал бы текущим.
     /// </summary>
     /// <param name="headingTops">Верх каждого заголовка в координатах документа, по порядку.</param>
     /// <param name="scrollOffset">Текущее смещение прокрутки.</param>
     /// <param name="scrollMaximum">Наибольшее смещение; 0 — документ целиком в окне.</param>
-    /// <param name="viewportHeight">Высота окна документа.</param>
     /// <returns>Индекс пункта или -1, если заголовков нет.</returns>
     public static int FindCurrentEntry(
         IReadOnlyList<double> headingTops,
         double scrollOffset,
-        double scrollMaximum,
-        double viewportHeight)
+        double scrollMaximum)
     {
         ArgumentNullException.ThrowIfNull(headingTops);
 
@@ -84,7 +89,7 @@ public sealed class DocumentOutline
             return headingTops.Count - 1;
         }
 
-        var readingLine = scrollOffset + Math.Max(0, viewportHeight) / 3;
+        var readingLine = scrollOffset + ReadingLineOffset;
         var current = 0;
         for (var index = 0; index < headingTops.Count; index++)
         {

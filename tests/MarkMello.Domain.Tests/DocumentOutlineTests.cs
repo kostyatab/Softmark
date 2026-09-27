@@ -87,19 +87,33 @@ public sealed class DocumentOutlineTests
     [Fact]
     public void FindCurrentEntryIsFirstBeforeTheFirstHeadingReachesTheReadingLine()
     {
-        // Окно 900: линия чтения на трети — 300 от верха окна.
-        Assert.Equal(0, DocumentOutline.FindCurrentEntry([500, 1500, 2500], 0, 3000, 900));
+        // Линия чтения — 80 от верха окна.
+        Assert.Equal(0, DocumentOutline.FindCurrentEntry([500, 1500, 2500], 0, 3000));
     }
 
     [Fact]
-    public void FindCurrentEntryIsLastHeadingAboveTheTopThirdOfTheWindow()
+    public void FindCurrentEntryIsFirstAtTheTopWhileTheSecondHeadingIsStillBelowTheReadingLine()
+    {
+        // samples/sample.md в самом верху: второй заголовок уже в окне, но ниже линии.
+        Assert.Equal(0, DocumentOutline.FindCurrentEntry([85, 252, 900], 0, 3000));
+    }
+
+    [Fact]
+    public void FindCurrentEntryIsLastHeadingAboveTheReadingLine()
     {
         double[] tops = [100, 1500, 2500];
 
-        Assert.Equal(0, DocumentOutline.FindCurrentEntry(tops, 1199, 3000, 900));
-        Assert.Equal(1, DocumentOutline.FindCurrentEntry(tops, 1201, 3000, 900));
-        Assert.Equal(1, DocumentOutline.FindCurrentEntry(tops, 2199, 3000, 900));
-        Assert.Equal(2, DocumentOutline.FindCurrentEntry(tops, 2201, 3000, 900));
+        Assert.Equal(0, DocumentOutline.FindCurrentEntry(tops, 1419, 3000));
+        Assert.Equal(1, DocumentOutline.FindCurrentEntry(tops, 1421, 3000));
+        Assert.Equal(1, DocumentOutline.FindCurrentEntry(tops, 2419, 3000));
+        Assert.Equal(2, DocumentOutline.FindCurrentEntry(tops, 2421, 3000));
+    }
+
+    [Fact]
+    public void FindCurrentEntryKeepsAHeadingPlacedAtTheTopByNavigation()
+    {
+        // Переход ставит заголовок на 24 от верха; следующий, в 60 ниже, до линии не дошёл.
+        Assert.Equal(1, DocumentOutline.FindCurrentEntry([100, 1500, 1560], 1476, 3000));
     }
 
     [Fact]
@@ -108,21 +122,22 @@ public sealed class DocumentOutlineTests
         // Короткий последний раздел не дотягивается до линии чтения — в конце он всё равно текущий.
         double[] tops = [100, 1500, 2950];
 
-        Assert.Equal(1, DocumentOutline.FindCurrentEntry(tops, 2000, 2400, 900));
-        Assert.Equal(2, DocumentOutline.FindCurrentEntry(tops, 2400, 2400, 900));
-        Assert.Equal(2, DocumentOutline.FindCurrentEntry(tops, 2399.5, 2400, 900));
+        Assert.Equal(1, DocumentOutline.FindCurrentEntry(tops, 2000, 2400));
+        Assert.Equal(2, DocumentOutline.FindCurrentEntry(tops, 2400, 2400));
+        Assert.Equal(2, DocumentOutline.FindCurrentEntry(tops, 2399.5, 2400));
     }
 
     [Fact]
     public void FindCurrentEntryUsesTheReadingLineWhenTheDocumentDoesNotScroll()
     {
-        Assert.Equal(0, DocumentOutline.FindCurrentEntry([10, 400], 0, 0, 900));
+        Assert.Equal(0, DocumentOutline.FindCurrentEntry([10, 400], 0, 0));
+        Assert.Equal(1, DocumentOutline.FindCurrentEntry([10, 60, 400], 0, 0));
     }
 
     [Fact]
     public void FindCurrentEntryIsMinusOneWithoutHeadings()
     {
-        Assert.Equal(-1, DocumentOutline.FindCurrentEntry([], 0, 100, 900));
+        Assert.Equal(-1, DocumentOutline.FindCurrentEntry([], 0, 100));
     }
 
     [Fact]

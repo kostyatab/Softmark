@@ -328,6 +328,13 @@ public sealed class MarkdownDocumentView : UserControl
     public event EventHandler<MarkdownFileLinkRequestedEventArgs>? MarkdownFileLinkRequested;
 
     /// <summary>
+    /// Ссылка <c>#якорь</c> привела к заголовку: аргумент — индекс его блока в
+    /// <see cref="Document"/>, если это заголовок верхнего уровня, иначе -1 (заголовок
+    /// внутри цитаты, плашки, списка). Поднимается уже после прокрутки.
+    /// </summary>
+    public event EventHandler<int>? HeadingAnchorNavigated;
+
+    /// <summary>
     /// Currently active search query, or null when find is not active.
     /// </summary>
     public string? ActiveSearchQuery => _activeSearchQuery.Length == 0 ? null : _activeSearchQuery;
@@ -2997,15 +3004,31 @@ public sealed class MarkdownDocumentView : UserControl
     internal bool TryScrollToTopLevelHeading(int blockIndex)
         => GetTopLevelHeadingControl(blockIndex) is { } target && TryScrollTargetIntoView(target);
 
-    private bool TryScrollToHeadingAnchor(string linkTarget)
+    internal bool TryScrollToHeadingAnchor(string linkTarget)
     {
         if (!MarkdownHeadingAnchorSlugger.TryNormalizeFragment(linkTarget, out var anchor)
-            || !_headingAnchorTargets.TryGetValue(anchor, out var target))
+            || !_headingAnchorTargets.TryGetValue(anchor, out var target)
+            || !TryScrollTargetIntoView(target))
         {
             return false;
         }
 
-        return TryScrollTargetIntoView(target);
+        HeadingAnchorNavigated?.Invoke(this, FindTopLevelHeadingBlockIndex(target));
+        return true;
+    }
+
+    /// <summary>Индекс блока, если контрол — сам заголовок верхнего уровня; иначе -1.</summary>
+    private int FindTopLevelHeadingBlockIndex(Control headingControl)
+    {
+        for (var index = 0; index < _builtBlocks.Count; index++)
+        {
+            if (ReferenceEquals(GetTopLevelHeadingControl(index), headingControl))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
