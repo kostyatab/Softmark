@@ -2085,6 +2085,7 @@ public sealed class MarkdownDocumentView : UserControl
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Classes = { ScrollBarReveal.PersistentHorizontalClass },
             Margin = new Thickness(
                 side,
                 _metrics.GetCodeBlockTopPadding(hasLanguage),

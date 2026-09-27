@@ -15,6 +15,7 @@
         <ResourceInclude Source="avares://MarkMello.Presentation/Themes/Colors.axaml" />
         <ResourceInclude Source="avares://MarkMello.Presentation/Themes/Typography.axaml" />
         <ResourceInclude Source="avares://MarkMello.Presentation/Themes/Icons.axaml" />
+        <ResourceInclude Source="avares://MarkMello.Presentation/Themes/ScrollBar.axaml" />
       </ResourceDictionary.MergedDictionaries>
       <localization:LocalizationService x:Key="Localization" />
     </ResourceDictionary>

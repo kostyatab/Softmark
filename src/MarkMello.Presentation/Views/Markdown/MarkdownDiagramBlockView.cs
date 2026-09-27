@@ -99,11 +99,12 @@ internal sealed class MarkdownDiagramBlockView : ContentControl
         // The background comes from the theme style: Naiad draws only in the
         // light Mermaid palette, so the dark theme lays a light sheet under it.
         var metrics = _typography.Metrics;
+        var padding = metrics.DiagramPadding;
         return new Border
         {
             Classes = { "mm-md-diagram", "mm-md-diagram-success" },
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(metrics.DiagramPadding),
+            Padding = new Thickness(padding, padding, padding, 0),
             CornerRadius = new CornerRadius(metrics.DiagramCornerRadius),
             // The scroll bar sits on the sheet, which is light in both themes,
             // so it takes the light variant. The scope stays inside the border:
@@ -116,7 +117,15 @@ internal sealed class MarkdownDiagramBlockView : ContentControl
                 {
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                     VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    Content = imageControl,
+                    Classes = { ScrollBarReveal.PersistentHorizontalClass },
+                    // The bottom padding lives inside the scroll area, like a code
+                    // block's: the scroll bar of a wide diagram lies in it rather
+                    // than over the bottom of the picture.
+                    Content = new Border
+                    {
+                        Padding = new Thickness(0, 0, 0, padding),
+                        Child = imageControl,
+                    },
                 },
             },
         };

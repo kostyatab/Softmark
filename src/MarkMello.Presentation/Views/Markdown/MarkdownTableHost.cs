@@ -65,6 +65,7 @@ internal sealed class MarkdownTableHost : Decorator
         {
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Classes = { ScrollBarReveal.PersistentHorizontalClass },
             Content = Panel
         };
         ScrollViewer.ScrollChanged += (_, _) =>

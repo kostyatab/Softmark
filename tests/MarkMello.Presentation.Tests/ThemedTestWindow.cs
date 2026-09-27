@@ -6,8 +6,8 @@ using Avalonia.Themes.Fluent;
 namespace MarkMello.Presentation.Tests;
 
 /// <summary>
-/// Окно с темой приложения, как в App.axaml: Fluent, стили контролов, палитра, шрифты
-/// и иконки. Тестовая сессия запускается без темы, а шаблоны Fluent и их
+/// Окно с темой приложения, как в App.axaml: Fluent, стили контролов, палитра, шрифты,
+/// иконки и полоса прокрутки. Тестовая сессия запускается без темы, а шаблоны Fluent и их
 /// состояния нужны там, где тест проверяет вид и поведение контролов.
 /// </summary>
 internal static class ThemedTestWindow
@@ -26,6 +26,7 @@ internal static class ThemedTestWindow
         window.Resources.MergedDictionaries.Add(Assert.IsAssignableFrom<IResourceProvider>(Load("Colors.axaml")));
         window.Resources.MergedDictionaries.Add(Assert.IsAssignableFrom<IResourceProvider>(Load("Typography.axaml")));
         window.Resources.MergedDictionaries.Add(Assert.IsAssignableFrom<IResourceProvider>(Load("Icons.axaml")));
+        window.Resources.MergedDictionaries.Add(Assert.IsAssignableFrom<IResourceProvider>(Load("ScrollBar.axaml")));
 
         // Контент — только после темы: тема контрола выбирается, когда он попадает
         // в дерево, и добавленная позже Fluent его шаблон уже не подменит.

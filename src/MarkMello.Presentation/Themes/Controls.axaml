@@ -1485,6 +1485,16 @@
     <Setter Property="Background" Value="{DynamicResource MmBorderBrush}" />
   </Style>
 
+  <!--
+    Блок документа, который листается вбок (таблица, блок кода, диаграмма):
+    горизонтальная полоса видна и в покое, пока содержимое не помещается, —
+    подсказка, что блок можно листать. Вертикальную прокрутку документа человек
+    ожидает и так, поэтому остальные полосы скрываются (Themes/ScrollBar.axaml).
+  -->
+  <Style Selector="ScrollViewer.mm-scrollbar-persistent /template/ ScrollBar#PART_HorizontalScrollBar /template/ Thumb">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+
   <!-- Блок кода — лист с рамкой; поля и скругление в em задаёт MarkdownDocumentView -->
   <Style Selector="Border.mm-md-codeblock">
     <Setter Property="BorderThickness" Value="1" />

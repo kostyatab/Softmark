@@ -91,7 +91,6 @@
                    AcceptsTab="True"
                    NewLine="{Binding DocumentNewLine}"
                    TextWrapping="Wrap"
-                   ScrollViewer.AllowAutoHide="False"
                    ScrollViewer.VerticalScrollBarVisibility="Auto"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                    KeyDown="OnEditorKeyDown"

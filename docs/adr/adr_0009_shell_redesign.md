@@ -180,6 +180,8 @@ Accepted
 | `MmQuoteMarkBrush` | `#B9AFA6` | `#6B635D` | полоса и значок цитаты (добавлен 2026-09-22 в MM-60) |
 | `MmCodeBlockBackgroundBrush` | `#FFFDFA` | `#201C19` | фон блока кода: светлый лист в рамке, в тёмной теме равен фону страницы (добавлен 2026-09-22 в MM-60) |
 | `MmAlert{Note,Tip,Important,Warning,Caution}BackgroundBrush` | цвет вида alert с непрозрачностью 8 % (`#14226FB3` …) | то же, 10 % (`#1A73B0EE` …) | плашка GitHub alert (добавлены 2026-09-22 в MM-61) |
+| `MmScrollThumbBrush` | `#521F1915` | `#4DE7E4DF` | ползунок полосы прокрутки: `MmTextBrush` при 32 % и 30 % (добавлен 2026-09-27 в MM-54) |
+| `MmScrollThumbHoverBrush` | `#801F1915` | `#73E7E4DF` | ползунок при наведении и перетаскивании: `MmTextBrush` при 50 % и 45 % (добавлен 2026-09-27 в MM-54) |
 
 Удаляются вместе с тайтлбаром: `MmTitleBarBrush`, `MmTitleBarTextBrush` и ресурс высоты `MmTitleBarHeight`.
 

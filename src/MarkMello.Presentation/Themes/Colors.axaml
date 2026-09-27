@@ -105,6 +105,10 @@
       <SolidColorBrush x:Key="MmTabActiveBrush">#E2DBD4</SolidColorBrush>
       <!-- Скрим модальных диалогов: тёплый тёмный #201915 при 28 % -->
       <SolidColorBrush x:Key="MmScrimBrush">#47201915</SolidColorBrush>
+      <!-- Ползунок полосы прокрутки: цвет текста при 32 %, при наведении и
+           перетаскивании — при 50 % -->
+      <SolidColorBrush x:Key="MmScrollThumbBrush">#521F1915</SolidColorBrush>
+      <SolidColorBrush x:Key="MmScrollThumbHoverBrush">#801F1915</SolidColorBrush>
       <!-- Тень карточек над документом: широкий тёплый слой плюс узкий контактный,
            rgba(56,40,28,.24) и rgba(56,40,28,.06) холста -->
       <BoxShadows x:Key="MmCardShadow">0 18 48 -12 #3D38281C, 0 2 6 #0F38281C</BoxShadows>
@@ -219,6 +223,10 @@
       <SolidColorBrush x:Key="MmTabActiveBrush">#423C37</SolidColorBrush>
       <!-- Скрим модальных диалогов: чёрный 50 % -->
       <SolidColorBrush x:Key="MmScrimBrush">#80000000</SolidColorBrush>
+      <!-- Ползунок полосы прокрутки: цвет текста при 30 %, при наведении и
+           перетаскивании — при 45 % -->
+      <SolidColorBrush x:Key="MmScrollThumbBrush">#4DE7E4DF</SolidColorBrush>
+      <SolidColorBrush x:Key="MmScrollThumbHoverBrush">#73E7E4DF</SolidColorBrush>
       <!-- Тень карточек над документом: на тёмном фоне работает только чёрный,
            rgba(0,0,0,.65) и rgba(0,0,0,.3) холста -->
       <BoxShadows x:Key="MmCardShadow">0 18 48 -12 #A6000000, 0 2 6 #4D000000</BoxShadows>

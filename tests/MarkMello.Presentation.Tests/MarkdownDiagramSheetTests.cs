@@ -87,7 +87,12 @@ public sealed class MarkdownDiagramSheetTests
             var (window, sheet) = Show(ThemeVariant.Dark);
             var em = ReadingPreferences.Default.FontSize;
 
-            Assert.Equal(new Thickness(em), sheet.Padding);
+            // Нижнее поле — внутри прокрутки: полоса широкой диаграммы ложится в него,
+            // а не на картинку.
+            var scrolledPadding = sheet.GetVisualDescendants().OfType<ScrollViewer>().Single()
+                .GetVisualDescendants().OfType<Border>().First(border => border.Child is Image).Padding;
+            Assert.Equal(new Thickness(em, em, em, 0), sheet.Padding);
+            Assert.Equal(new Thickness(0, 0, 0, em), scrolledPadding);
             Assert.Equal(new CornerRadius(em * 0.625), sheet.CornerRadius);
 
             window.Close();
