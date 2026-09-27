@@ -32,6 +32,12 @@ public partial class ShellViewModel
     /// </summary>
     public bool IsEmptyDocumentSurface => State == ViewState.NoDocument && ShowsSidebar;
 
+    /// <summary>
+    /// Пустой экран папки строится только в папке: с кнопками A-EmptyFolder он уже не две
+    /// строки текста, и держать его скрытым с запуска незачем (ADR-0009 Rule 12).
+    /// </summary>
+    public object? EmptyDocumentSurfaceContent => IsEmptyDocumentSurface ? this : null;
+
     private void InitializeOpenDocuments()
     {
         OpenDocuments = new OpenDocumentsViewModel(ActivateTabAsync, CloseTabAsync);

@@ -123,6 +123,9 @@ public partial class ShellViewModel
         nameof(RecentRemoveCancel),
         nameof(EmptySurfaceHint),
         nameof(EmptySurfaceTitle),
+        nameof(EmptyFolderHint),
+        nameof(EmptyFolderTitle),
+        nameof(SidebarNoDocuments),
         nameof(ExternalChangeKeep),
         nameof(ExternalChangeMessage),
         nameof(ExternalChangeReload),
@@ -192,6 +195,9 @@ public partial class ShellViewModel
     public string TabsOverflowHeader => _localization["TabsOverflowHeader"];
     public string EmptySurfaceHint => _localization["EmptySurfaceHint"];
     public string EmptySurfaceTitle => _localization["EmptySurfaceTitle"];
+    public string EmptyFolderHint => _localization["EmptyFolderHint"];
+    public string EmptyFolderTitle => _localization["EmptyFolderTitle"];
+    public string SidebarNoDocuments => _localization["SidebarNoDocuments"];
 
     /// <summary>«ещё N» — счётчик приходит из состава вкладок, поэтому свойство пересчитывается.</summary>
     public string TabsOverflowLabel => _localization.Format("TabsOverflow", OpenDocuments.OverflowTabs.Count);

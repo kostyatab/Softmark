@@ -275,6 +275,16 @@
       <Setter Property="Margin" Value="19,0" />
     </Style>
 
+    <!-- Папка без документов (A-EmptyFolder): строка на месте поиска, на вертикали иконок -->
+    <Style Selector="TextBlock.mm-sidebar-no-documents">
+      <Setter Property="FontFamily" Value="{DynamicResource MmDocumentSansFontFamily}" />
+      <Setter Property="FontSize" Value="12.5" />
+      <Setter Property="LineHeight" Value="19" />
+      <Setter Property="Foreground" Value="{DynamicResource MmTextSoftBrush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="19,4,19,10" />
+    </Style>
+
     <!-- Обрезанная выдача обязана быть видна: иначе 200 совпадений выглядят полным ответом -->
     <Style Selector="Border.mm-search-truncated">
       <Setter Property="Background" Value="{DynamicResource MmSurfaceHoverBrush}" />
@@ -412,7 +422,8 @@
       <!-- Поиск по именам: поле и лупа получают акцент, пока запрос активен (класс active) -->
       <Border Grid.Row="2"
               Classes="mm-search-shell"
-              Classes.active="{Binding Workspace.HasSearchQuery}">
+              Classes.active="{Binding Workspace.HasSearchQuery}"
+              IsVisible="{Binding !Workspace.ShowsNoDocumentsNote}">
         <Grid ColumnDefinitions="Auto,*,Auto"
               ColumnSpacing="8">
           <views:LucideIcon Grid.Column="0"
@@ -435,6 +446,12 @@
                      Text="{Binding Workspace.SearchCountLabel}" />
         </Grid>
       </Border>
+
+      <TextBlock Grid.Row="2"
+                 Name="NoDocumentsNote"
+                 Classes="mm-sidebar-no-documents"
+                 IsVisible="{Binding Workspace.ShowsNoDocumentsNote}"
+                 Text="{Binding SidebarNoDocuments}" />
 
       <!-- Строки не уезжают за правый край: без этого поле ввода и сообщение об ошибке
            растягивают дерево по ширине текста и обрезаются краем сайдбара. -->

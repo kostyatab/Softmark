@@ -405,7 +405,13 @@
             </DataTemplate>
           </ContentControl.ContentTemplate>
         </ContentControl>
-        <views:EmptyDocumentSurfaceView IsVisible="{Binding IsEmptyDocumentSurface}" />
+        <ContentControl Content="{Binding EmptyDocumentSurfaceContent}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:ShellViewModel">
+              <views:EmptyDocumentSurfaceView />
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
         <ContentControl IsVisible="{Binding IsViewer}"
                         Content="{Binding ActiveDocumentContent}" />
         <views:LoadErrorView IsVisible="{Binding IsError}" />

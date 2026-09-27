@@ -23,6 +23,7 @@ public sealed partial class WorkspaceViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSearchQuery))]
     [NotifyPropertyChangedFor(nameof(ShowsTree))]
+    [NotifyPropertyChangedFor(nameof(ShowsNoDocumentsNote))]
     private string _searchQuery = string.Empty;
 
     [ObservableProperty]

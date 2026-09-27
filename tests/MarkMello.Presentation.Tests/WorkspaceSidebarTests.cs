@@ -167,6 +167,201 @@ public sealed class WorkspaceSidebarTests
         Assert.Equal(TestPaths.At("docs", "README.md"), harness.ViewModel.CurrentDocumentPath);
     }
 
+    /// <summary>
+    /// Папка без документов: до фикса пустой экран отправлял выбирать файл в пустое дерево.
+    /// Не-документ в корне не считается — открыть его всё равно нельзя.
+    /// </summary>
+    [Fact]
+    public async Task FolderWithoutDocumentsIsRecognisedFromTheRootLevel()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root, WorkspaceEntry.ForFile(TestPaths.At("docs", "pack.bat"), "pack.bat"));
+        var harness = CreateHarness(fileSystem);
+
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        Assert.True(harness.ViewModel.IsEmptyDocumentSurface);
+        Assert.True(workspace.HasNoDocuments);
+        Assert.True(workspace.ShowsNoDocumentsNote);
+        Assert.Equal([Root], fileSystem.EnumeratedPaths);
+    }
+
+    [Fact]
+    public async Task FolderWithADocumentIsNotEmpty()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root, WorkspaceEntry.ForFile(TestPaths.At("docs", "notes.md"), "notes.md"));
+        var harness = CreateHarness(fileSystem);
+
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        Assert.True(harness.ViewModel.IsEmptyDocumentSurface);
+        Assert.False(harness.ViewModel.Workspace!.HasNoDocuments);
+        Assert.False(harness.ViewModel.Workspace.ShowsNoDocumentsNote);
+    }
+
+    /// <summary>
+    /// Что лежит в нераскрытом каталоге, неизвестно, а читать его ради пустого экрана нельзя
+    /// (ADR-0007 Rule 5): остаётся обычный экран. Раскрыли и увидели, что пусто, — флаг ставится.
+    /// </summary>
+    [Fact]
+    public async Task UnreadDirectoryKeepsTheUsualEmptySurfaceUntilExpanded()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root, WorkspaceEntry.ForDirectory(TestPaths.At("docs", "images"), "images"));
+        fileSystem.AddDirectory(
+            TestPaths.At("docs", "images"),
+            WorkspaceEntry.ForFile(TestPaths.At("docs", "images", "logo.png"), "logo.png"));
+        var harness = CreateHarness(fileSystem);
+
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        Assert.False(workspace.HasNoDocuments);
+        Assert.Equal([Root], fileSystem.EnumeratedPaths);
+
+        await workspace.ExpandNodeAsync(workspace.Roots.Single());
+
+        Assert.True(workspace.HasNoDocuments);
+    }
+
+    /// <summary>Каталог, который не удалось прочитать, мог хранить документы: папка не считается пустой.</summary>
+    [Fact]
+    public async Task UnreadableDirectoryDoesNotMakeTheFolderEmpty()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root, WorkspaceEntry.ForDirectory(TestPaths.At("docs", "private"), "private"));
+        fileSystem.FailWith(TestPaths.At("docs", "private"), new UnauthorizedAccessException());
+        var harness = CreateHarness(fileSystem);
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        var folder = workspace.Roots.Single();
+        await workspace.ExpandNodeAsync(folder);
+
+        Assert.True(folder.HasLoadError);
+        Assert.False(workspace.HasNoDocuments);
+    }
+
+    /// <summary>
+    /// Раскрытые папки возвращаются по одной: пока первая уже прочитана, а вторая ещё нет,
+    /// до фикса экран мигал «выберите файл» посреди перечитывания корня.
+    /// </summary>
+    [Fact]
+    public async Task EmptyFolderStateHoldsWhileTheTreeIsRebuilt()
+    {
+        var fileSystem = CreateFileSystemWithOnlyImages("images", "scans");
+        var harness = CreateHarness(fileSystem);
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        foreach (var folder in workspace.Roots.ToList())
+        {
+            await workspace.ExpandNodeAsync(folder);
+        }
+
+        Assert.True(workspace.HasNoDocuments);
+
+        var flips = RecordHasNoDocumentsChanges(workspace);
+        await AddFileFromOutsideAsync(harness, fileSystem, "LICENSE", "images", "scans");
+
+        Assert.True(workspace.HasNoDocuments);
+        Assert.Empty(flips);
+    }
+
+    /// <summary>
+    /// Свёрнутая, но уже прочитанная папка переживает перечитывание соседей: до фикса она
+    /// снова становилась непрочитанной, и экран пустой папки уходил насовсем.
+    /// </summary>
+    [Fact]
+    public async Task CollapsedFolderStaysReadAfterARefreshNextToIt()
+    {
+        var fileSystem = CreateFileSystemWithOnlyImages("images");
+        var harness = CreateHarness(fileSystem);
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        var images = workspace.Roots.Single();
+        await workspace.ExpandNodeAsync(images);
+        images.IsExpanded = false;
+
+        await AddFileFromOutsideAsync(harness, fileSystem, "LICENSE", "images");
+
+        Assert.True(workspace.HasNoDocuments);
+        var rebuiltImages = workspace.Roots.Single(static node => node.Name == "images");
+        Assert.False(rebuiltImages.IsExpanded);
+        Assert.Equal(["logo.png"], rebuiltImages.Children.Select(static node => node.Name));
+        Assert.Single(fileSystem.EnumeratedPaths, TestPaths.At("docs", "images"));
+    }
+
+    /// <summary>Новая папка раскрывается показом уже после перечитывания — экран не мигает и здесь.</summary>
+    [Fact]
+    public async Task CreatingAFolderInAnEmptyFolderKeepsTheEmptyState()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root);
+        var harness = CreateHarness(fileSystem);
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        var flips = RecordHasNoDocumentsChanges(workspace);
+
+        workspace.StartNewFolderCommand.Execute(null);
+        workspace.EditName = "images";
+        await workspace.CommitEditCommand.ExecuteAsync(null);
+
+        Assert.Contains(workspace.Roots, static node => node.Name == "images");
+        Assert.True(workspace.HasNoDocuments);
+        Assert.Empty(flips);
+    }
+
+    /// <summary>Файл положили в папку снаружи — экран меняется без перезапуска.</summary>
+    [Fact]
+    public async Task DocumentAddedFromOutsideLeavesTheEmptyFolderState()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root);
+        var harness = CreateHarness(fileSystem);
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+
+        var workspace = harness.ViewModel.Workspace!;
+        Assert.True(workspace.HasNoDocuments);
+
+        var notified = new List<string>();
+        workspace.PropertyChanged += (_, e) => notified.Add(e.PropertyName ?? string.Empty);
+
+        var notes = TestPaths.At("docs", "notes.md");
+        fileSystem.AddDirectory(Root, WorkspaceEntry.ForFile(notes, "notes.md"));
+        await harness.ViewModel.ApplyWorkspaceChangesAsync([new WorkspaceChange(WorkspaceChangeKind.Created, notes)]);
+
+        Assert.False(workspace.HasNoDocuments);
+        Assert.False(workspace.ShowsNoDocumentsNote);
+        Assert.Contains(nameof(WorkspaceViewModel.HasNoDocuments), notified);
+        Assert.Contains(nameof(WorkspaceViewModel.ShowsNoDocumentsNote), notified);
+    }
+
+    /// <summary>«Новый файл» с пустого экрана — та же команда, что в шапке сайдбара: файл создаётся и открывается.</summary>
+    [Fact]
+    public async Task CreatingTheFirstFileLeavesTheEmptyFolderState()
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root);
+        var harness = CreateHarness(fileSystem);
+        await harness.ViewModel.OpenFolderPathAsync(Root);
+        harness.Loader.Sources[TestPaths.At("docs", "first.md")] =
+            new MarkdownSource(TestPaths.At("docs", "first.md"), "first.md", "");
+
+        var workspace = harness.ViewModel.Workspace!;
+        workspace.StartNewFileCommand.Execute(null);
+        workspace.EditName = "first";
+        await workspace.CommitEditCommand.ExecuteAsync(null);
+
+        Assert.False(workspace.HasNoDocuments);
+        Assert.Equal(TestPaths.At("docs", "first.md"), harness.ViewModel.CurrentDocumentPath);
+        Assert.False(harness.ViewModel.IsEmptyDocumentSurface);
+    }
+
     [Fact]
     public async Task ActivatingNonDocumentIsInert()
     {
@@ -274,6 +469,50 @@ public sealed class WorkspaceSidebarTests
         {
             await Task.Yield();
         }
+    }
+
+    /// <summary>В корне только папки, и в каждой — по картинке: документов нет нигде.</summary>
+    private static FakeWorkspaceFileSystem CreateFileSystemWithOnlyImages(params string[] folders)
+    {
+        var fileSystem = new FakeWorkspaceFileSystem();
+        fileSystem.AddDirectory(Root, [.. RootFolders(folders)]);
+        foreach (var folder in folders)
+        {
+            fileSystem.AddDirectory(
+                TestPaths.At("docs", folder),
+                WorkspaceEntry.ForFile(TestPaths.At("docs", folder, "logo.png"), "logo.png"));
+        }
+
+        return fileSystem;
+    }
+
+    private static IEnumerable<WorkspaceEntry> RootFolders(string[] folders)
+        => folders.Select(static folder => WorkspaceEntry.ForDirectory(TestPaths.At("docs", folder), folder));
+
+    /// <summary>Файл-не-документ появился в корне: watcher перечитывает корень целиком.</summary>
+    private static async Task AddFileFromOutsideAsync(
+        WorkspaceTestHarness harness,
+        FakeWorkspaceFileSystem fileSystem,
+        string name,
+        params string[] folders)
+    {
+        var path = TestPaths.At("docs", name);
+        fileSystem.AddDirectory(Root, [.. RootFolders(folders), WorkspaceEntry.ForFile(path, name)]);
+        await harness.ViewModel.ApplyWorkspaceChangesAsync([new WorkspaceChange(WorkspaceChangeKind.Created, path)]);
+    }
+
+    private static List<bool> RecordHasNoDocumentsChanges(WorkspaceViewModel workspace)
+    {
+        var values = new List<bool>();
+        workspace.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(WorkspaceViewModel.HasNoDocuments))
+            {
+                values.Add(workspace.HasNoDocuments);
+            }
+        };
+
+        return values;
     }
 
     private static async Task WaitForLoadErrorAsync(FileTreeNodeViewModel node)

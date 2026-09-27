@@ -3,27 +3,88 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:MarkMello.Presentation.ViewModels"
+             xmlns:views="using:MarkMello.Presentation.Views"
              mc:Ignorable="d"
              x:Class="MarkMello.Presentation.Views.EmptyDocumentSurfaceView"
              x:DataType="vm:ShellViewModel">
 
-  <!-- Папка открыта, вкладок нет: без иллюстрации, одна строка объяснения (макет 07) -->
-  <StackPanel HorizontalAlignment="Center"
-              VerticalAlignment="Center"
-              MaxWidth="360"
-              Spacing="8">
-    <TextBlock Text="{Binding EmptySurfaceTitle}"
-               FontFamily="{DynamicResource MmDocumentSerifFontFamily}"
-               FontSize="22"
-               HorizontalAlignment="Center"
-               Foreground="{DynamicResource MmTextBrush}" />
-    <TextBlock Text="{Binding EmptySurfaceHint}"
-               FontFamily="{DynamicResource MmDocumentSansFontFamily}"
-               FontSize="13.5"
-               LineHeight="21"
-               TextAlignment="Center"
-               TextWrapping="Wrap"
-               Foreground="{DynamicResource MmTextSoftBrush}" />
-  </StackPanel>
+  <UserControl.Styles>
+    <Style Selector="TextBlock.mm-empty-title">
+      <Setter Property="FontFamily" Value="{DynamicResource MmDocumentSerifFontFamily}" />
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource MmTextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.mm-empty-hint">
+      <Setter Property="FontFamily" Value="{DynamicResource MmDocumentSansFontFamily}" />
+      <Setter Property="FontSize" Value="13.5" />
+      <Setter Property="LineHeight" Value="21" />
+      <Setter Property="TextAlignment" Value="Center" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource MmTextSoftBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Panel>
+    <!-- Папка открыта, вкладок нет: без иллюстрации, одна строка объяснения (макет 07) -->
+    <StackPanel Name="NoSelectionPanel"
+                IsVisible="{Binding !Workspace.HasNoDocuments}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                MaxWidth="360"
+                Spacing="8">
+      <TextBlock Classes="mm-empty-title"
+                 Text="{Binding EmptySurfaceTitle}" />
+      <TextBlock Classes="mm-empty-hint"
+                 Text="{Binding EmptySurfaceHint}" />
+    </StackPanel>
+
+    <!-- В папке нет документов (A-EmptyFolder): выбирать в дереве нечего, поэтому экран
+         предлагает создать первый файл или уйти в другую папку — те же команды, что «+»
+         в шапке сайдбара и «Открыть папку…» в меню ⋯. -->
+    <StackPanel Name="NoDocumentsPanel"
+                IsVisible="{Binding Workspace.HasNoDocuments}"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                MaxWidth="400">
+      <TextBlock Classes="mm-empty-title"
+                 Text="{Binding EmptyFolderTitle}" />
+      <TextBlock Classes="mm-empty-hint"
+                 Margin="0,8,0,0"
+                 Text="{Binding EmptyFolderHint}" />
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Center"
+                  Margin="0,22,0,0"
+                  Spacing="8">
+        <Button Name="EmptyFolderNewFileButton"
+                Classes="mm-action-secondary mm-action-large mm-action-with-icon"
+                Command="{Binding Workspace.StartNewFileCommand}">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="7">
+            <views:LucideIcon Data="{DynamicResource LucideFilePlusGeometry}"
+                              Width="14"
+                              Height="14" />
+            <TextBlock Text="{Binding SidebarNewFile}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Name="EmptyFolderOpenFolderButton"
+                Classes="mm-action-secondary mm-action-large mm-action-with-icon"
+                Command="{Binding OpenFolderCommand}"
+                ToolTip.Tip="{Binding OpenFolderShortcut}">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="7">
+            <views:LucideIcon Data="{DynamicResource LucideFolderOpenGeometry}"
+                              Width="14"
+                              Height="14" />
+            <TextBlock Text="{Binding SidebarOpenAnotherFolder}"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Panel>
 
 </UserControl>

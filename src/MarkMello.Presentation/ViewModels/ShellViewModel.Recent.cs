@@ -64,6 +64,10 @@ public partial class ShellViewModel
             OnPropertyChanged(nameof(WelcomeContent));
             SyncRecentListWithWelcome();
         }
+        else if (e.PropertyName == nameof(IsEmptyDocumentSurface))
+        {
+            OnPropertyChanged(nameof(EmptyDocumentSurfaceContent));
+        }
     }
 
     /// <summary>

@@ -201,17 +201,24 @@ public sealed partial class WorkspaceViewModel
         if (result is WorkspaceMutationResult.Success success)
         {
             var previousPath = node?.Path;
+            var directory = _editDirectory;
             CancelEdit();
-            await RefreshDirectoryAsync(_editDirectory).ConfigureAwait(true);
 
-            if (kind == TreeEditKind.Rename && previousPath is not null)
+            // Новая папка после перечитывания ещё не прочитана и раскрывается только показом:
+            // флаг пустой папки пересчитывается по итогу, а не между этими шагами.
+            await HoldingDocumentPresenceAsync(async () =>
             {
-                // Вкладку переводим до показа узла: выделение открывает документ,
-                // и без этого на тот же файл завелась бы вторая вкладка.
-                _pathChanged(previousPath, success.Entry.Path);
-            }
+                await RefreshDirectoryAsync(directory).ConfigureAwait(true);
 
-            await RevealAsync(success.Entry.Path).ConfigureAwait(true);
+                if (kind == TreeEditKind.Rename && previousPath is not null)
+                {
+                    // Вкладку переводим до показа узла: выделение открывает документ,
+                    // и без этого на тот же файл завелась бы вторая вкладка.
+                    _pathChanged(previousPath, success.Entry.Path);
+                }
+
+                await RevealAsync(success.Entry.Path).ConfigureAwait(true);
+            }).ConfigureAwait(true);
 
             if (kind == TreeEditKind.NewFile)
             {
@@ -240,10 +247,13 @@ public sealed partial class WorkspaceViewModel
 
         if (result is WorkspaceMutationResult.Success success)
         {
-            await RefreshDirectoryAsync(directory).ConfigureAwait(true);
-
-            // Копия выделяется в дереве, но вкладку не открывает.
-            await RevealAsync(success.Entry.Path).ConfigureAwait(true);
+            // Копия выделяется в дереве, но вкладку не открывает. Копия папки раскрывается
+            // показом — флаг пустой папки пересчитывается уже после этого.
+            await HoldingDocumentPresenceAsync(async () =>
+            {
+                await RefreshDirectoryAsync(directory).ConfigureAwait(true);
+                await RevealAsync(success.Entry.Path).ConfigureAwait(true);
+            }).ConfigureAwait(true);
             return;
         }
 
@@ -332,7 +342,10 @@ public sealed partial class WorkspaceViewModel
     }
 
     /// <summary>Перечитывает один каталог после операции — обход остального дерева не нужен.</summary>
-    public async Task RefreshDirectoryAsync(string directoryPath)
+    public Task RefreshDirectoryAsync(string directoryPath)
+        => HoldingDocumentPresenceAsync(() => RefreshDirectoryCoreAsync(directoryPath));
+
+    private async Task RefreshDirectoryCoreAsync(string directoryPath)
     {
         // Перечитанный каталог строит новые узлы, поэтому раскрытые папки надо запомнить
         // и вернуть: иначе любая правка снаружи сворачивала бы дерево пользователю.
@@ -359,7 +372,7 @@ public sealed partial class WorkspaceViewModel
         var children = await _expandFolderNode.ExecuteAsync(node.Path).ConfigureAwait(true);
         if (children is ExpandFolderNodeResult.Success loaded)
         {
-            node.ReplaceChildren(CreateNodes(loaded.Children, node.Depth + 1));
+            node.ReplaceChildren(RebuildNodes(loaded.Children, node.Children, node.Depth + 1));
             ApplyActiveDocumentHighlight(node);
             await RestoreExpansionAsync(expanded).ConfigureAwait(true);
         }
@@ -375,8 +388,9 @@ public sealed partial class WorkspaceViewModel
 
     private void ReplaceRoots(IReadOnlyList<WorkspaceEntry> entries)
     {
+        var rebuilt = RebuildNodes(entries, Roots, depth: 0);
         Roots.Clear();
-        foreach (var node in CreateNodes(entries, depth: 0))
+        foreach (var node in rebuilt)
         {
             Roots.Add(node);
         }
@@ -388,6 +402,34 @@ public sealed partial class WorkspaceViewModel
                 node.IsActiveDocument = !node.IsDirectory && PathsEqual(node.Path, ActiveDocumentPath);
             }
         }
+    }
+
+    /// <summary>
+    /// Узлы перечитанного каталога. Свёрнутая, но уже прочитанная папка переходит в новое
+    /// дерево как есть, вместе с детьми: это тот же in-memory cache, что и при повторном
+    /// раскрытии (ADR-0007 Rule 5). Без этого любая правка рядом забывала бы, что в папке
+    /// уже смотрели, и экран пустой папки сменялся бы на «выберите файл». Раскрытые папки
+    /// строятся заново и перечитываются через <see cref="RestoreExpansionAsync"/>, как раньше.
+    /// </summary>
+    private List<FileTreeNodeViewModel> RebuildNodes(
+        IReadOnlyList<WorkspaceEntry> entries,
+        IEnumerable<FileTreeNodeViewModel> previous,
+        int depth)
+    {
+        var cached = previous
+            .Where(static node => node is
+            {
+                IsDirectory: true,
+                HasLoadedChildren: true,
+                HasLoadError: false,
+                IsExpanded: false,
+                IsLoadingChildren: false
+            })
+            .ToList();
+
+        return entries
+            .Select(entry => cached.FirstOrDefault(node => node.Entry == entry) ?? CreateNode(entry, depth))
+            .ToList();
     }
 
     private FileTreeNodeViewModel? FindLoadedNode(string path)

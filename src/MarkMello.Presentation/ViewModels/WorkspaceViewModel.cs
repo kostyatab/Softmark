@@ -41,6 +41,8 @@ public sealed partial class WorkspaceViewModel : ObservableObject
         {
             Roots.Add(node);
         }
+
+        UpdateHasNoDocuments();
     }
 
     /// <summary>
@@ -85,6 +87,22 @@ public sealed partial class WorkspaceViewModel : ObservableObject
     /// <summary>Путь документа, открытого в окне. Подсвечивает строку дерева акцентной планкой.</summary>
     [ObservableProperty]
     private string? _activeDocumentPath;
+
+    /// <summary>
+    /// В папке точно нет ни одного документа — пустой экран предлагает создать первый,
+    /// а не выбрать файл в дереве (A-EmptyFolder). «Точно» — по уже прочитанному дереву:
+    /// нераскрытый каталог может что-то хранить, а обходить его ради этого флага нельзя
+    /// (ADR-0007 Rule 5), поэтому с ним флаг остаётся снятым.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNoDocumentsNote))]
+    private bool _hasNoDocuments;
+
+    /// <summary>
+    /// Строка «Здесь нет файлов .md» встаёт на место поиска: искать в такой папке нечего.
+    /// Начатый поиск она не прячет — иначе запрос остался бы без поля, где его сбросить.
+    /// </summary>
+    public bool ShowsNoDocumentsNote => HasNoDocuments && !HasSearchQuery;
 
 
     /// <summary>Первый `README.md` в корне: с него открывается папка, если он есть.</summary>
@@ -152,16 +170,61 @@ public sealed partial class WorkspaceViewModel : ObservableObject
         finally
         {
             node.IsLoadingChildren = false;
+            UpdateHasNoDocuments();
+        }
+    }
+
+    /// <summary>
+    /// Сколько составных операций сейчас перестраивают дерево. Пока идёт хотя бы одна,
+    /// флаг не пересчитывается: перечитанный каталог на время остаётся с непрочитанными
+    /// подпапками, и экран мигал бы между «выберите файл» и «создайте первый».
+    /// </summary>
+    private int _documentPresenceHolds;
+
+    /// <summary>
+    /// Пересчитывается после каждого чтения каталога: создание файла, правка снаружи
+    /// и раскрытие узла сходятся на нём, так что экран меняется без перезапуска.
+    /// Каталог с ошибкой чтения тоже считается непрочитанным: что в нём, неизвестно.
+    /// </summary>
+    private void UpdateHasNoDocuments()
+    {
+        if (_documentPresenceHolds > 0)
+        {
+            return;
+        }
+
+        HasNoDocuments = !EnumerateLoadedNodes().Any(static node =>
+            node.IsSupportedDocument
+            || (node.IsDirectory && (!node.HasLoadedChildren || node.HasLoadError)));
+    }
+
+    /// <summary>
+    /// Выполняет перестройку дерева целиком — перечитать, вернуть раскрытые папки,
+    /// показать созданный элемент — и пересчитывает флаг один раз, по итогу.
+    /// </summary>
+    private async Task HoldingDocumentPresenceAsync(Func<Task> rebuild)
+    {
+        _documentPresenceHolds++;
+        try
+        {
+            await rebuild().ConfigureAwait(true);
+        }
+        finally
+        {
+            _documentPresenceHolds--;
+            UpdateHasNoDocuments();
         }
     }
 
     private IEnumerable<FileTreeNodeViewModel> CreateNodes(IReadOnlyList<WorkspaceEntry> entries, int depth)
-        => entries.Select(entry =>
-        {
-            var node = new FileTreeNodeViewModel(entry, depth, ExpandNodeAsync);
-            node.ExpansionChanged += OnNodeExpansionChanged;
-            return node;
-        });
+        => entries.Select(entry => CreateNode(entry, depth));
+
+    private FileTreeNodeViewModel CreateNode(WorkspaceEntry entry, int depth)
+    {
+        var node = new FileTreeNodeViewModel(entry, depth, ExpandNodeAsync);
+        node.ExpansionChanged += OnNodeExpansionChanged;
+        return node;
+    }
 
     /// <summary>
     /// Счётчик раскрытий. Сам список раскрытых узлов живёт в дереве, а shell нужен
