@@ -219,9 +219,12 @@
                         VerticalAlignment="Center">
               <!-- Кнопка обновления (ADR-0004, «Update Model») — первой, чтобы раскрытая
                    надпись росла влево над вкладками, а не над кнопками. Создаётся, только
-                   когда есть новая версия: до этого у ContentControl нет содержимого. -->
+                   когда есть новая версия: до этого у ContentControl нет содержимого.
+                   Без обрезки: раскрытая плашка шире хоста в 30 px, и по его границам
+                   от неё осталась бы одна правая полоса. -->
               <ContentControl Name="UpdateButtonHost"
                               Margin="0,0,2,0"
+                              ClipToBounds="False"
                               IsVisible="{Binding Updates.IsButtonVisible}"
                               Content="{Binding Updates.ButtonContent}">
                 <ContentControl.ContentTemplate>

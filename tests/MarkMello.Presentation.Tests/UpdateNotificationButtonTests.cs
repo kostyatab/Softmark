@@ -132,6 +132,45 @@ public sealed class UpdateNotificationButtonTests
         });
     }
 
+    /// <summary>
+    /// Раскрытая плашка шире кнопки в раскладке и рисуется за её границами: ни один предок до
+    /// строки окна не обрезает её по своим. Иначе видна только полоса в 30 px, ровно по кнопке.
+    /// </summary>
+    [Theory]
+    [InlineData("available")]
+    [InlineData("downloading")]
+    [InlineData("downloaded")]
+    public Task ExpandedLabelIsNotClippedByTheRow(string state)
+    {
+        return _fixture.RunAsync(async () =>
+        {
+            var (updates, _, coordinator) = await UpdateWindowTests.CreateInStateAsync(state);
+            var window = Show(CreateShell(updates));
+            var button = window.GetVisualDescendants().OfType<UpdateNotificationButton>().Single();
+            var halo = button.GetControl<Border>("UpdateHalo");
+            var row = window.GetControl<Grid>("WindowRowContent");
+
+            // В покое плашка без фона: левее кнопки мышь достаётся вкладкам, а не ей.
+            var besideButton = Center(button.GetControl<Button>("UpdateButton"), window) - new Point(40, 0);
+            var hit = window.InputHitTest(besideButton) as Visual;
+            Assert.False(hit is not null && (ReferenceEquals(hit, button) || hit.GetVisualAncestors().Contains(button)));
+
+            window.MouseMove(Center(button.GetControl<Button>("UpdateButton"), window));
+            Render(window);
+
+            Assert.True(button.IsExpanded);
+            Assert.True(button.GetControl<Border>("UpdateLabelHost").GetBaseValue(Layoutable.WidthProperty).Value > 30);
+            var clipping = halo.GetVisualAncestors()
+                .TakeWhile(ancestor => !ReferenceEquals(ancestor, row))
+                .Where(ancestor => ancestor.ClipToBounds)
+                .Select(ancestor => ancestor.GetType().Name + (ancestor is Control { Name: { } name } ? " " + name : ""));
+            Assert.Empty(clipping);
+
+            coordinator.CancelDownload();
+            window.Close();
+        });
+    }
+
     /// <summary>Во время загрузки надпись — проценты; кольцо показывает ту же долю.</summary>
     [Fact]
     public Task DownloadingLabelShowsPercent()
