@@ -61,7 +61,7 @@ public sealed class NewTabMenuCardTests
             Assert.Contains("open", plus.Classes);
             Assert.Equal(["NewTabMenuOpenFile", "NewTabMenuNewDocument"], Items(window).Select(static button => button.Name));
             Assert.Equal([viewModel.AppMenuOpenFile, viewModel.AppMenuNewDocument], Items(window).Select(Label));
-            Assert.Equal([viewModel.OpenFileShortcut, viewModel.NewDocumentShortcut], Items(window).Select(Shortcut));
+            Assert.Equal([viewModel.OpenFileShortcutKeys, viewModel.NewDocumentShortcutKeys], Items(window).Select(Shortcut));
 
             var card = Card(window);
             Assert.Equal(Resource(window, "MmCardShadow"), card.BoxShadow);
@@ -471,11 +471,13 @@ public sealed class NewTabMenuCardTests
 
     private static string? Label(Button button)
         => button.GetVisualDescendants().OfType<TextBlock>()
-            .FirstOrDefault(static block => !block.Classes.Contains("mm-menu-shortcut"))?.Text;
+            .FirstOrDefault(static block => block.Parent is not Border { Classes: var classes } || !classes.Contains("kbd"))?.Text;
 
-    private static string? Shortcut(Button button)
-        => button.GetVisualDescendants().OfType<TextBlock>()
-            .SingleOrDefault(static block => block.Classes.Contains("mm-menu-shortcut"))?.Text;
+    /// <summary>Клавиши сочетания — по плашке на клавишу.</summary>
+    private static IReadOnlyList<string> Shortcut(Button button)
+        => [.. button.GetVisualDescendants().OfType<Border>()
+            .Where(static border => border.Classes.Contains("kbd"))
+            .Select(static border => Assert.IsType<TextBlock>(border.Child).Text ?? string.Empty)];
 
     private static ContentPresenter Presenter(Button button)
         => button.GetVisualDescendants().OfType<ContentPresenter>().First();

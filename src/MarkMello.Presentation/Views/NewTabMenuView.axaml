@@ -18,9 +18,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuOpenFile}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding OpenFileShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding OpenFileShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="NewTabMenuNewDocument"
@@ -29,9 +29,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuNewDocument}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding NewDocumentShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding NewDocumentShortcutKeys}" />
         </Grid>
       </Button>
     </StackPanel>

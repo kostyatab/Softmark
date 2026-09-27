@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="using:System"
         xmlns:views="using:MarkMello.Presentation.Views">
 
   <!--
@@ -491,7 +492,7 @@
     <Setter Property="Padding" Value="8,0" />
     <Setter Property="HorizontalAlignment" Value="Left" />
   </Style>
-  <!-- «Язык, обновления, версия · Настройки… ⌘,» — строка во всю ширину карточки -->
+  <!-- «Язык, обновления, версия · Настройки… [⌘] [,]» — строка во всю ширину карточки -->
   <Style Selector="Button.mm-list-item.mm-card-footer">
     <Setter Property="Height" Value="36" />
     <Setter Property="Margin" Value="-8,0" />
@@ -570,7 +571,7 @@
     <Setter Property="Foreground" Value="{DynamicResource MmTextFaintBrush}" />
   </Style>
 
-  <!-- «Не сохранено» рядом с «Готово»: короткая подпись и плашка ⌘S -->
+  <!-- «Не сохранено» рядом с «Готово»: короткая подпись и плашки [⌘] [S] -->
   <Style Selector="TextBlock.mm-row-status">
     <Setter Property="FontFamily" Value="{DynamicResource MmDocumentSansFontFamily}" />
     <Setter Property="FontSize" Value="12" />
@@ -583,21 +584,51 @@
     <Setter Property="Opacity" Value="0.5" />
   </Style>
 
-  <!-- Keyboard hint pill -->
+  <!--
+    Сочетание клавиш — ряд плашек, по клавише на плашку, как в Raycast: «⌘» «O» на
+    macOS, «Ctrl» «O» на Windows и Linux. Клавиши — из ShortcutLabel.Keys; один ряд
+    на все места: меню, строку окна, карточку Aa, стартовый экран и экран ошибки.
+  -->
+  <Style Selector="ItemsControl.mm-shortcut-keys">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <StackPanel Orientation="Horizontal" Spacing="4" />
+      </ItemsPanelTemplate>
+    </Setter>
+    <Setter Property="ItemTemplate">
+      <DataTemplate x:DataType="sys:String">
+        <Border Classes="kbd">
+          <TextBlock Text="{Binding}" />
+        </Border>
+      </DataTemplate>
+    </Setter>
+  </Style>
+
+  <!--
+    Плашка клавиши: ровная рамка, квадрат 20×20 под однознаковую клавишу — на macOS
+    все модификаторы однознаковые (⌘ ⇧ ⌥), и плашки ряда выходят одной ширины. Поле 3,
+    а не 4: ⌘ и ⇧ в Inter 11 шириной 12 px и при поле 4 квадрат не держат.
+    Слова (Ctrl, Shift) плашку растягивают в прямоугольник. Шрифт интерфейсный, а не
+    моноширинный: ⌘ ⌥ ⇧ ⌫ ⎋ в моно-начертании уходят в фолбэк и скачут по базовой линии.
+  -->
   <Style Selector="Border.kbd">
     <Setter Property="Background" Value="{DynamicResource MmKeyboardBackgroundBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource MmKeyboardBorderBrush}" />
-    <!-- Край снизу вдвое толще: плашка читается как крышка клавиши -->
-    <Setter Property="BorderThickness" Value="1,1,1,2" />
-    <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Padding" Value="5,1" />
-    <Setter Property="MinHeight" Value="18" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="3,0" />
+    <Setter Property="MinWidth" Value="20" />
+    <Setter Property="MinHeight" Value="20" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
   <Style Selector="Border.kbd TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource MmDocumentSansFontFamily}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{DynamicResource MmTextSoftBrush}" />
     <Setter Property="UseLayoutRounding" Value="True" />
-    <Setter Property="LineHeight" Value="12" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="TextAlignment" Value="Center" />
   </Style>
@@ -682,7 +713,7 @@
   <!--
     Меню приложения — ⋯ (A-Menu), меню сайдбара и контекстное меню строки дерева —
     одна карточка: отступ 6, радиус 12, пункты 26 px — чуть свободнее системных 24,
-    с подписью сочетания справа, группы через линии. Все меню внутри окна
+    с плашками сочетания справа, группы через линии. Все меню внутри окна
     (ADR-0009 Rule 4), поэтому вид у них один и стили общие.
   -->
   <Style Selector="Border.mm-app-menu-panel, Border.mm-sidebar-menu-panel">
@@ -699,11 +730,13 @@
     <Setter Property="FontSize" Value="13" />
   </Style>
 
-  <Style Selector="TextBlock.mm-menu-shortcut">
-    <Setter Property="FontSize" Value="12" />
-    <Setter Property="Foreground" Value="{DynamicResource MmTextSoftBrush}" />
+  <!-- Неприменимый пункт гасит плашки вместе с подписью: крышка сливается с карточкой,
+       рамка и буква бледнеют -->
+  <Style Selector="Button.mm-menu-command:disabled Border.kbd">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MmBorderSoftBrush}" />
   </Style>
-  <Style Selector="Button.mm-menu-command:disabled TextBlock.mm-menu-shortcut">
+  <Style Selector="Button.mm-menu-command:disabled Border.kbd TextBlock">
     <Setter Property="Foreground" Value="{DynamicResource MmTextFaintBrush}" />
   </Style>
 
@@ -724,9 +757,6 @@
   </Style>
 
   <Style Selector="Button.mm-menu-command TextBlock">
-    <Setter Property="VerticalAlignment" Value="Center" />
-  </Style>
-  <Style Selector="TextBlock.mm-menu-shortcut">
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 

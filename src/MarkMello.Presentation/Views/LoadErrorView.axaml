@@ -90,12 +90,8 @@
                   Spacing="6"
                   Margin="0,22,0,0"
                   HorizontalAlignment="Center">
-        <Border Classes="kbd">
-          <TextBlock Text="{Binding DialogCancelShortcut}"
-                     FontFamily="{DynamicResource MmDocumentMonoFontFamily}"
-                     FontSize="10"
-                     Foreground="{DynamicResource MmTextSoftBrush}" />
-        </Border>
+        <ItemsControl Classes="mm-shortcut-keys"
+                      ItemsSource="{Binding DialogCancelShortcutKeys}" />
         <TextBlock Text="{Binding LoadErrorDismiss}"
                    FontSize="12"
                    VerticalAlignment="Center"

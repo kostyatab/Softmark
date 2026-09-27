@@ -12,9 +12,9 @@ namespace MarkMello.Presentation.Tests;
 
 /// <summary>
 /// Нижняя строка карточки Aa: подсказка «Язык, обновления, версия», ссылка
-/// «Настройки…» и плашка сочетания. Ссылка и плашка видны всегда и целиком;
-/// подсказка — целиком или никак, без обрубка на полуслове. С «⌘,» на macOS она
-/// помещается в обоих языках, с «Ctrl+,» на Windows и Linux — нет.
+/// «Настройки…» и плашки сочетания. Ссылка и плашки видны всегда и целиком;
+/// подсказка — целиком или никак, без обрубка на полуслове. С плашками «⌘» «,» на
+/// macOS она помещается только по-английски, с «Ctrl» «,» на Windows и Linux — нет.
 /// </summary>
 [Collection(AvaloniaHeadlessTestGroup.Name)]
 public sealed class ReadingCardFooterTests
@@ -27,7 +27,7 @@ public sealed class ReadingCardFooterTests
     }
 
     [Theory]
-    [InlineData("macOS", AppLanguage.Russian, true)]
+    [InlineData("macOS", AppLanguage.Russian, false)]
     [InlineData("macOS", AppLanguage.English, true)]
     [InlineData("Windows", AppLanguage.Russian, false)]
     [InlineData("Windows", AppLanguage.English, false)]
@@ -44,7 +44,7 @@ public sealed class ReadingCardFooterTests
             var footer = view.GetVisualDescendants().OfType<Button>().Single(static button => button.Classes.Contains("mm-card-footer"));
             var hint = footer.GetVisualDescendants().OfType<OptionalTextBlock>().Single();
             var link = footer.GetVisualDescendants().OfType<TextBlock>().Single(static text => text.Classes.Contains("mm-card-footer-link"));
-            var shortcut = footer.GetVisualDescendants().OfType<Border>().Single(static border => border.Classes.Contains("kbd"));
+            var shortcut = footer.GetVisualDescendants().OfType<ItemsControl>().Single(static keys => keys.Classes.Contains("mm-shortcut-keys"));
 
             Assert.Equal(!hintShown, hint.IsTrimmed);
             Assert.DoesNotContain(link.TextLayout.TextLines, static line => line.HasCollapsed);

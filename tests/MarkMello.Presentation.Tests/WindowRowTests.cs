@@ -78,7 +78,7 @@ public sealed class WindowRowTests
             Assert.Equal(
                 ["UnsavedIndicator", "FindTriggerButton", "DoneEditButton", "AppMenuTriggerButton"],
                 VisibleRowButtons(window));
-            Assert.Equal("Ctrl+S", UnsavedShortcut(window));
+            Assert.Equal(["Ctrl", "S"], UnsavedShortcut(window));
 
             window.Hide();
         });
@@ -374,15 +374,16 @@ public sealed class WindowRowTests
             .Where(name => window.GetControl<Control>(name).IsVisible)
             .ToArray();
 
-    private static string? UnsavedShortcut(MainWindow window)
+    /// <summary>
+    /// Клавиши рядом с «Не сохранено» — ряд плашек. Окно здесь без тем приложения,
+    /// поэтому берём клавиши ряда, а как они рисуются, проверяет <see cref="ShortcutKeysRowTests"/>.
+    /// </summary>
+    private static IEnumerable<string>? UnsavedShortcut(MainWindow window)
         => window.GetControl<StackPanel>("UnsavedIndicator")
             .GetVisualDescendants()
-            .OfType<Border>()
-            .Single(border => border.Classes.Contains("kbd"))
-            .GetVisualDescendants()
-            .OfType<TextBlock>()
-            .Single()
-            .Text;
+            .OfType<ItemsControl>()
+            .Single(static keys => keys.Classes.Contains("mm-shortcut-keys"))
+            .ItemsSource as IEnumerable<string>;
 
     /// <summary>
     /// Окно без composition root, как в <see cref="TextSizeShortcutTests"/>: закрыть его

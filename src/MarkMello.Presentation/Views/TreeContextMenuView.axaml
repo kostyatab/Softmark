@@ -27,9 +27,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding TreeRename}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding TreeRenameShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding TreeRenameShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="TreeMenuDuplicate"
@@ -53,9 +53,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding TreeDelete}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding TreeDeleteShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding TreeDeleteShortcutKeys}" />
         </Grid>
       </Button>
     </StackPanel>

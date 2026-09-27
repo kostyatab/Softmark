@@ -159,11 +159,11 @@
           </StackPanel>
 
           <!--
-            Строка ведёт в окно «Настройки» (ADR-0009 Rule 5). Зазор перед ссылкой
-            4, а не 8 из макета: с плашкой «⌘,» русской подсказке в Inter иначе
-            не хватает пикселя. От ссылки её и так отделяет пустое место. С плашкой
-            «Ctrl+,» (Windows, Linux) подсказка не помещается и при 4 — тогда она
-            не рисуется совсем, а не обрывается на полуслове.
+            Строка ведёт в окно «Настройки» (ADR-0009 Rule 5). Зазоры 4, а не 8 из
+            макета: с плашками «⌘» «,» английской подсказке в Inter иначе не хватает
+            места. Русская на macOS и любая с «Ctrl» «,» (Windows, Linux) не
+            помещается и так — тогда она не рисуется совсем, а не обрывается на
+            полуслове.
           -->
           <Button Classes="mm-list-item mm-card-footer"
                   Command="{Binding OpenAppSettingsCommand}">
@@ -176,13 +176,9 @@
               <TextBlock Grid.Column="1"
                          Classes="mm-card-footer-link"
                          Text="{Binding ReadingMoreSettingsLink}" />
-              <Border Grid.Column="2"
-                      Classes="kbd"
-                      Margin="4,0,0,0">
-                <TextBlock Text="{Binding SettingsShortcut}"
-                           FontFamily="{DynamicResource MmDocumentMonoFontFamily}"
-                           FontSize="10" />
-              </Border>
+              <ItemsControl Grid.Column="2"
+                            Classes="mm-shortcut-keys"
+                            ItemsSource="{Binding SettingsShortcutKeys}" />
             </Grid>
           </Button>
         </StackPanel>

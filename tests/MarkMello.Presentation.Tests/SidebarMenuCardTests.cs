@@ -458,7 +458,7 @@ public sealed class SidebarMenuCardTests
 
     private static string? Label(Button button)
         => button.GetVisualDescendants().OfType<TextBlock>()
-            .FirstOrDefault(static block => !block.Classes.Contains("mm-menu-shortcut"))?.Text;
+            .FirstOrDefault(static block => block.Parent is not Border { Classes: var classes } || !classes.Contains("kbd"))?.Text;
 
     private static IEnumerable<Button> Items(Window window, string panel)
         => window.GetControl<ContentControl>(panel)

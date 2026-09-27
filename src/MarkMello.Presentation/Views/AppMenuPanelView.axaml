@@ -17,9 +17,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuNewDocument}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding NewDocumentShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding NewDocumentShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="MenuOpenFile"
@@ -28,9 +28,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuOpenFile}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding OpenFileShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding OpenFileShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="MenuOpenFolder"
@@ -39,9 +39,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuOpenFolder}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding OpenFolderShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding OpenFolderShortcutKeys}" />
         </Grid>
       </Button>
       <Border Classes="mm-menu-separator" />
@@ -51,9 +51,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuSave}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding SaveShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding SaveShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="MenuSaveAs"
@@ -62,9 +62,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuSaveAs}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding SaveAsShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding SaveAsShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="MenuReload"
@@ -73,9 +73,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuReload}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding ReloadShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding ReloadShortcutKeys}" />
         </Grid>
       </Button>
       <Border Classes="mm-menu-separator" />
@@ -86,9 +86,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuFilesPanel}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding ToggleSidebarShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding ToggleSidebarShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="MenuCloseTab"
@@ -97,9 +97,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuCloseTab}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding CloseTabShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding CloseTabShortcutKeys}" />
         </Grid>
       </Button>
       <Button Name="MenuCloseFolder"
@@ -118,9 +118,9 @@
         <Grid ColumnDefinitions="*,Auto"
               ColumnSpacing="12">
           <TextBlock Text="{Binding AppMenuSettings}" />
-          <TextBlock Grid.Column="1"
-                     Classes="mm-menu-shortcut"
-                     Text="{Binding SettingsShortcut}" />
+          <ItemsControl Grid.Column="1"
+                        Classes="mm-shortcut-keys"
+                        ItemsSource="{Binding SettingsShortcutKeys}" />
         </Grid>
       </Button>
       <!-- На macOS «Проверить обновления…» и «О MarkMello» живут в системном меню

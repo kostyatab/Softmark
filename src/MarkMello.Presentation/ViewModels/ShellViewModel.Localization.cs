@@ -311,7 +311,7 @@ public partial class ShellViewModel
     public string WelcomeTagline => _localization["WelcomeTagline"];
 
     /// <summary>
-    /// Подписи сочетаний для меню и стартового экрана: ⌘ на macOS, Ctrl на Windows и Linux.
+    /// Подписи сочетаний для тултипов: ⌘ на macOS, Ctrl на Windows и Linux.
     /// От языка не зависят, поэтому в <see cref="LocalizedBindingPropertyNames"/> их нет.
     /// </summary>
     public string OpenFileShortcut => CommandShortcut(Key.O);
@@ -319,25 +319,6 @@ public partial class ShellViewModel
     public string OpenFolderShortcut => CommandShortcut(Key.O, KeyModifiers.Shift);
 
     public string ToggleSidebarShortcut => CommandShortcut(Key.B);
-
-    public string NewDocumentShortcut => CommandShortcut(Key.N);
-
-    /// <summary>Сочетание сохранения — плашка рядом с «Не сохранено» в строке окна.</summary>
-    public string SaveShortcut => CommandShortcut(Key.S);
-
-    public string SaveAsShortcut => CommandShortcut(Key.S, KeyModifiers.Shift);
-
-    public string ReloadShortcut => CommandShortcut(Key.R);
-
-    public string CloseTabShortcut => CommandShortcut(Key.W);
-
-    /// <summary>Сочетание настроек приложения — плашка в нижней строке карточки Aa.</summary>
-    public string SettingsShortcut => CommandShortcut(Key.OemComma);
-
-    /// <summary>Клавиши строки дерева — подписи в её контекстном меню.</summary>
-    public string TreeRenameShortcut => KeyShortcut(Key.F2);
-
-    public string TreeDeleteShortcut => KeyShortcut(Key.Delete);
 
     /// <summary>
     /// Клавиши диалогов — в тултипах их кнопок: Enter подтверждает, Esc отменяет,
@@ -349,9 +330,37 @@ public partial class ShellViewModel
 
     public string DirtyPromptDiscardShortcut => CommandShortcut(Key.Back);
 
-    /// <summary>Клавиши «Открыть файл» по отдельности — на стартовом экране каждая в своей плашке.</summary>
-    public IReadOnlyList<string> OpenFileShortcutKeys
-        => ShortcutLabel.Keys(ShortcutLabel.Command(Key.O, _platform.PlatformName), _platform.PlatformName);
+    /// <summary>
+    /// Клавиши сочетаний по отдельности — каждая рисуется своей плашкой: в меню ⋯,
+    /// меню «+» у вкладок и на стартовом экране. Как и подписи тултипов, от языка не зависят.
+    /// </summary>
+    public IReadOnlyList<string> OpenFileShortcutKeys => CommandShortcutKeys(Key.O);
+
+    public IReadOnlyList<string> OpenFolderShortcutKeys => CommandShortcutKeys(Key.O, KeyModifiers.Shift);
+
+    public IReadOnlyList<string> ToggleSidebarShortcutKeys => CommandShortcutKeys(Key.B);
+
+    public IReadOnlyList<string> NewDocumentShortcutKeys => CommandShortcutKeys(Key.N);
+
+    /// <summary>Сохранение — ещё и плашки рядом с «Не сохранено» в строке окна.</summary>
+    public IReadOnlyList<string> SaveShortcutKeys => CommandShortcutKeys(Key.S);
+
+    public IReadOnlyList<string> SaveAsShortcutKeys => CommandShortcutKeys(Key.S, KeyModifiers.Shift);
+
+    public IReadOnlyList<string> ReloadShortcutKeys => CommandShortcutKeys(Key.R);
+
+    public IReadOnlyList<string> CloseTabShortcutKeys => CommandShortcutKeys(Key.W);
+
+    /// <summary>Настройки приложения — ещё и плашки в нижней строке карточки Aa.</summary>
+    public IReadOnlyList<string> SettingsShortcutKeys => CommandShortcutKeys(Key.OemComma);
+
+    /// <summary>Клавиши строки дерева — в её контекстном меню.</summary>
+    public IReadOnlyList<string> TreeRenameShortcutKeys => KeyShortcutKeys(Key.F2);
+
+    public IReadOnlyList<string> TreeDeleteShortcutKeys => KeyShortcutKeys(Key.Delete);
+
+    /// <summary>Esc под экраном ошибки загрузки: закрыть его.</summary>
+    public IReadOnlyList<string> DialogCancelShortcutKeys => KeyShortcutKeys(Key.Escape);
 
     private string CommandShortcut(Key key, KeyModifiers extra = KeyModifiers.None)
         => ShortcutLabel.Format(ShortcutLabel.Command(key, _platform.PlatformName, extra), _platform.PlatformName);
@@ -359,6 +368,12 @@ public partial class ShellViewModel
     /// <summary>Сочетание без командной клавиши — например, ↵ и ⇧↵ в поле поиска.</summary>
     private string KeyShortcut(Key key, KeyModifiers modifiers = KeyModifiers.None)
         => ShortcutLabel.Format(new KeyGesture(key, modifiers), _platform.PlatformName);
+
+    private IReadOnlyList<string> CommandShortcutKeys(Key key, KeyModifiers extra = KeyModifiers.None)
+        => ShortcutLabel.Keys(ShortcutLabel.Command(key, _platform.PlatformName, extra), _platform.PlatformName);
+
+    private IReadOnlyList<string> KeyShortcutKeys(Key key)
+        => ShortcutLabel.Keys(new KeyGesture(key), _platform.PlatformName);
 
     /// <summary>Плашка под документом: «499 слов · 3 мин».</summary>
     public string ReadingStatusLabel

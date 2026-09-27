@@ -242,12 +242,8 @@
                           IsVisible="{Binding ShowsUnsavedIndicator}">
                 <TextBlock Classes="mm-row-status"
                            Text="{Binding EditUnsavedLabel}" />
-                <Border Classes="kbd">
-                  <TextBlock Text="{Binding SaveShortcut}"
-                             FontFamily="{DynamicResource MmDocumentMonoFontFamily}"
-                             FontSize="10"
-                             Foreground="{DynamicResource MmTextSoftBrush}" />
-                </Border>
+                <ItemsControl Classes="mm-shortcut-keys"
+                              ItemsSource="{Binding SaveShortcutKeys}" />
               </StackPanel>
 
               <ToggleButton Name="FindTriggerButton"

@@ -474,10 +474,13 @@ public sealed class ShellViewModelTests
         }
     }
 
-    /// <summary>Подписи сочетаний меню — по платформе (MM-25): ⌘ и порядок ⇧⌘ на macOS.</summary>
+    /// <summary>
+    /// Клавиши сочетаний меню — по платформе (MM-25): ⌘ и порядок ⇧⌘ на macOS. Каждая
+    /// клавиша — своя плашка, поэтому в данных они через пробел.
+    /// </summary>
     [Theory]
-    [InlineData("macOS", "⌘N", "⇧⌘S", "⌘R", "⌘W", "⌘,")]
-    [InlineData("Windows", "Ctrl+N", "Ctrl+Shift+S", "Ctrl+R", "Ctrl+W", "Ctrl+,")]
+    [InlineData("macOS", "⌘ N", "⇧ ⌘ S", "⌘ R", "⌘ W", "⌘ ,")]
+    [InlineData("Windows", "Ctrl N", "Ctrl Shift S", "Ctrl R", "Ctrl W", "Ctrl ,")]
     public void AppMenuShortcutsAreLabelledForThePlatform(
         string platformName,
         string newDocument,
@@ -488,11 +491,11 @@ public sealed class ShellViewModelTests
     {
         var harness = CreateHarness(platformName: platformName);
 
-        Assert.Equal(newDocument, harness.ViewModel.NewDocumentShortcut);
-        Assert.Equal(saveAs, harness.ViewModel.SaveAsShortcut);
-        Assert.Equal(reload, harness.ViewModel.ReloadShortcut);
-        Assert.Equal(closeTab, harness.ViewModel.CloseTabShortcut);
-        Assert.Equal(settings, harness.ViewModel.SettingsShortcut);
+        Assert.Equal(newDocument.Split(' '), harness.ViewModel.NewDocumentShortcutKeys);
+        Assert.Equal(saveAs.Split(' '), harness.ViewModel.SaveAsShortcutKeys);
+        Assert.Equal(reload.Split(' '), harness.ViewModel.ReloadShortcutKeys);
+        Assert.Equal(closeTab.Split(' '), harness.ViewModel.CloseTabShortcutKeys);
+        Assert.Equal(settings.Split(' '), harness.ViewModel.SettingsShortcutKeys);
     }
 
     [Fact]
@@ -1104,9 +1107,9 @@ public sealed class ShellViewModelTests
     }
 
     [Theory]
-    [InlineData("macOS", "Finish editing (⌘E)", "⌘S")]
-    [InlineData("Windows", "Finish editing (Ctrl+E)", "Ctrl+S")]
-    [InlineData("Linux", "Finish editing (Ctrl+E)", "Ctrl+S")]
+    [InlineData("macOS", "Finish editing (⌘E)", "⌘ S")]
+    [InlineData("Windows", "Finish editing (Ctrl+E)", "Ctrl S")]
+    [InlineData("Linux", "Finish editing (Ctrl+E)", "Ctrl S")]
     public void EditActionShortcutLabelsFollowPlatform(string platformName, string doneTooltip, string saveShortcut)
     {
         var viewModel = CreateHarness(platformName: platformName).ViewModel;
@@ -1114,13 +1117,13 @@ public sealed class ShellViewModelTests
         Assert.Equal("Done", viewModel.EditDoneLabel);
         Assert.Equal(doneTooltip, viewModel.EditDoneTooltip);
         Assert.Equal("Unsaved", viewModel.EditUnsavedLabel);
-        Assert.Equal(saveShortcut, viewModel.SaveShortcut);
+        Assert.Equal(saveShortcut.Split(' '), viewModel.SaveShortcutKeys);
     }
 
     [Theory]
-    [InlineData("macOS", "Smaller (⌘-)", "Larger (⌘+)", "⌘,")]
-    [InlineData("Windows", "Smaller (Ctrl+-)", "Larger (Ctrl++)", "Ctrl+,")]
-    [InlineData("Linux", "Smaller (Ctrl+-)", "Larger (Ctrl++)", "Ctrl+,")]
+    [InlineData("macOS", "Smaller (⌘-)", "Larger (⌘+)", "⌘ ,")]
+    [InlineData("Windows", "Smaller (Ctrl+-)", "Larger (Ctrl++)", "Ctrl ,")]
+    [InlineData("Linux", "Smaller (Ctrl+-)", "Larger (Ctrl++)", "Ctrl ,")]
     public void ReadingCardShortcutLabelsFollowPlatform(
         string platformName,
         string decreaseTooltip,
@@ -1134,7 +1137,7 @@ public sealed class ShellViewModelTests
 
         Assert.Equal(decreaseTooltip, viewModel.ReadingSizeDecreaseTooltip);
         Assert.Equal(increaseTooltip, viewModel.ReadingSizeIncreaseTooltip);
-        Assert.Equal(settingsShortcut, viewModel.SettingsShortcut);
+        Assert.Equal(settingsShortcut.Split(' '), viewModel.SettingsShortcutKeys);
     }
 
     [Fact]

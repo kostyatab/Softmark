@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:MarkMello.Presentation.ViewModels"
              xmlns:views="using:MarkMello.Presentation.Views"
-             xmlns:sys="using:System"
              mc:Ignorable="d"
              x:Class="MarkMello.Presentation.Views.WelcomeView"
              x:DataType="vm:ShellViewModel"
@@ -149,20 +148,8 @@
                   Spacing="6"
                   HorizontalAlignment="Center"
                   Margin="0,24,0,0">
-        <ItemsControl ItemsSource="{Binding OpenFileShortcutKeys}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <StackPanel Orientation="Horizontal" Spacing="6" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="sys:String">
-              <Border Classes="kbd">
-                <TextBlock Text="{Binding}" FontFamily="{DynamicResource MmDocumentMonoFontFamily}" FontSize="10" />
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <ItemsControl Classes="mm-shortcut-keys"
+                      ItemsSource="{Binding OpenFileShortcutKeys}" />
         <TextBlock Text="{Binding WelcomeDropHint}"
                    FontSize="12"
                    Foreground="{DynamicResource MmTextSoftBrush}"
